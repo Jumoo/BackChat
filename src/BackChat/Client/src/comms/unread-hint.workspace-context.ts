@@ -5,12 +5,14 @@ import { UMB_DOCUMENT_WORKSPACE_CONTEXT } from "@umbraco-cms/backoffice/document
 import { BACKCHAT_CONTEXT } from "../global/backchat.context.token";
 import { BACKCHAT_COMMS_WORKSPACE_VIEW_ALIAS, formatBadgeCount } from "../constants";
 import type { UnreadCount } from "../signalR/types";
+import { takePendingComms } from "./open-comms";
 
 const HINT_UNIQUE = "BackChat.Unread";
 
 // Puts the document's unread count on the comms tab, using the same hints Umbraco uses
 // for validation counts. Runs for the whole workspace, because the tab's own element only
-// exists while the tab is open. Umbraco hides a hint on the active tab.
+// exists while the tab is open. Umbraco hides a hint on the active tab. It also moves to the
+// tab when a BackChat link opened the document for it.
 export class BackChatUnreadHintWorkspaceContext extends UmbControllerBase implements UmbApi {
   #workspace?: typeof UMB_DOCUMENT_WORKSPACE_CONTEXT.TYPE;
   #backChat?: typeof BACKCHAT_CONTEXT.TYPE;
@@ -21,6 +23,12 @@ export class BackChatUnreadHintWorkspaceContext extends UmbControllerBase implem
     this.consumeContext(UMB_DOCUMENT_WORKSPACE_CONTEXT, (context) => {
       this.#workspace = context;
       this.#observe();
+      if (!context) return;
+      this.observe(
+        context.unique,
+        (unique) => unique && takePendingComms(unique, "comms"),
+        "_pendingComms"
+      );
     });
 
     this.consumeContext(BACKCHAT_CONTEXT, (context) => {

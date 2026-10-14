@@ -1,12 +1,12 @@
 import { css, customElement, html, nothing, state } from "@umbraco-cms/backoffice/external/lit";
 import { UmbModalBaseElement } from "@umbraco-cms/backoffice/modal";
 import { UMB_CURRENT_USER_CONTEXT } from "@umbraco-cms/backoffice/current-user";
-import { UMB_EDIT_DOCUMENT_WORKSPACE_PATH_PATTERN } from "@umbraco-cms/backoffice/document";
 import type { ChatModalData, ChatModalResult } from "./chat-modal.token";
 import type { Conversation, Mentionables } from "../signalR/types";
 import { BACKCHAT_CONTEXT } from "../global/backchat.context.token";
 import { conversationIcon, conversationTitle } from "../conversations/conversation-title";
 import type { BackChatOpenConversationEvent } from "../conversations/conversation-list.element";
+import { openDocumentComms } from "../comms/open-comms";
 import "../components/chat-messages.element";
 import "../conversations/conversation-list.element";
 import "../conversations/new-conversation.element";
@@ -39,6 +39,11 @@ export class BackChatChatModalElement extends UmbModalBaseElement<ChatModalData,
     });
   }
 
+  override connectedCallback() {
+    super.connectedCallback();
+    if (this.data?.conversation) this._view = { kind: "chat", conversation: this.data.conversation };
+  }
+
   #onClose() {
     this.modalContext?.reject();
   }
@@ -49,11 +54,7 @@ export class BackChatChatModalElement extends UmbModalBaseElement<ChatModalData,
     // A document's chat lives on the document, so go there
     if (conversation.kind === "Document") {
       this.modalContext?.reject();
-      window.history.pushState(
-        {},
-        "",
-        UMB_EDIT_DOCUMENT_WORKSPACE_PATH_PATTERN.generateAbsolute({ unique: conversation.channel })
-      );
+      openDocumentComms(conversation.channel);
       return;
     }
 

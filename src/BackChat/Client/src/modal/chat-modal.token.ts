@@ -1,6 +1,10 @@
 import { UmbModalToken } from "@umbraco-cms/backoffice/modal";
+import type { Conversation } from "../signalR/types";
 
-export type ChatModalData = Record<string, never>;
+export interface ChatModalData {
+  // Open straight into this conversation rather than the list
+  conversation?: Conversation;
+}
 
 export type ChatModalResult = Record<string, never>;
 

@@ -18,6 +18,11 @@ public interface IMentionStore
     IReadOnlyList<string> GetChannelsMentionedIn(Guid userKey);
 
     /// <summary>
+    /// Every mention of the user, newest first: the message it was in, its channel and date.
+    /// </summary>
+    IReadOnlyList<(Guid MessageKey, string Channel, DateTime Date)> GetForUser(Guid userKey);
+
+    /// <summary>
     /// The users mentioned in a channel.
     /// </summary>
     IReadOnlyList<Guid> GetMentionedUsers(string channel);
