@@ -355,7 +355,7 @@ public class ReviewService(
         long total;
         do
         {
-            IEnumerable<IContent> items = contentService.GetPagedOfType(contentTypeId, page++, pageSize, out total, null);
+            IEnumerable<IContent> items = contentService.GetPagedOfTypes([contentTypeId], page++, pageSize, out total, null);
             foreach (IContent item in items)
             {
                 ReviewDto review = reviewStore.Get(item.Key) ?? new ReviewDto { DocumentKey = item.Key };
