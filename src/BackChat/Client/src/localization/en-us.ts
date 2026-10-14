@@ -16,6 +16,7 @@ const enUs: UmbLocalizationDictionary = {
     empty: "No messages yet. Start the conversation.",
     saveToStart: "Save this document to start a chat about it.",
     sendFailedHeadline: "Message not sent",
+    unreadCount: (count: number) => (count === 1 ? "1 unread message" : `${count} unread messages`),
     sendFailedMessage: "The chat server didn't accept the message. Your text is still in the box, so try again in a moment.",
   },
 };

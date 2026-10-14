@@ -12,5 +12,6 @@ public class BackChatMigrationPlan : PackageMigrationPlan
     protected override void DefinePlan()
     {
         To<CreateChatMessagesTable>("create-chat-messages-table");
+        To<CreateReadStateTable>("create-read-state-table");
     }
 }

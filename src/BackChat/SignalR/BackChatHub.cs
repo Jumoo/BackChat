@@ -1,10 +1,8 @@
 using BackChat.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Umbraco.Cms.Core.Actions;
 using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Services;
-using Umbraco.Cms.Core.Services.AuthorizationStatus;
 using Umbraco.Cms.Web.Common.Authorization;
 using Umbraco.Extensions;
 
@@ -13,10 +11,36 @@ namespace BackChat.SignalR;
 [Authorize(Policy = AuthorizationPolicies.BackOfficeAccess)]
 public class BackChatHub(
     IUserService userService,
-    IContentPermissionService contentPermissionService,
-    IChatMessageStore messageStore) : Hub
+    ChannelAccessService channelAccess,
+    IChatMessageStore messageStore,
+    IReadStateStore readStateStore,
+    BackChatConnections connections,
+    BackChatNotifier notifier) : Hub
 {
     public const int MaxMessageLength = 2000;
+
+    public override async Task OnConnectedAsync()
+    {
+        IUser user = await GetCurrentUserAsync();
+
+        connections.Add(user.Key);
+        await Groups.AddToGroupAsync(Context.ConnectionId, BackChatNotifier.UserGroupName(user.Key));
+
+        await Clients.Caller.SendAsync("unread", await notifier.GetUnreadCountsAsync(user));
+
+        await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        Guid? userKey = Context.User?.Identity?.GetUserKey();
+        if (userKey is not null)
+        {
+            connections.Remove(userKey.Value);
+        }
+
+        await base.OnDisconnectedAsync(exception);
+    }
 
     /// <summary>
     /// Joins a channel. The caller gets its history, then live messages for that channel.
@@ -51,7 +75,27 @@ public class BackChatHub(
 
         messageStore.Add(chatMessage);
 
+        // Replying means you've read the channel
+        readStateStore.MarkRead(user.Key, channel, chatMessage.Date);
+
         await Clients.Group(GroupName(channel)).SendAsync("chat", chatMessage);
+
+        await notifier.SendUnreadCountAsync(user.Key, channel);
+        await notifier.ChannelChangedAsync(channel, user.Key);
+    }
+
+    /// <summary>
+    /// Marks a channel read up to now. The client calls it while the chat is open and visible.
+    /// Every tab the user has open gets the new count.
+    /// </summary>
+    public async Task MarkRead(string channel)
+    {
+        IUser user = await GetCurrentUserAsync();
+        channel = await AuthorizeChannelAsync(user, channel);
+
+        readStateStore.MarkRead(user.Key, channel, DateTime.UtcNow);
+
+        await notifier.SendUnreadCountAsync(user.Key, channel);
     }
 
     internal static string GroupName(string channel) => $"backchat:{channel}";
@@ -66,31 +110,8 @@ public class BackChatHub(
         return user ?? throw new HubException("No backoffice user.");
     }
 
-    /// <summary>
-    /// A channel is either the global channel or a document key. Document channels
-    /// need browse access to the document, so a chat is only visible to users who can see it.
-    /// </summary>
     /// <returns>The channel in its normalised form.</returns>
     private async Task<string> AuthorizeChannelAsync(IUser user, string channel)
-    {
-        if (channel == Constants.GlobalChannel)
-        {
-            return channel;
-        }
-
-        if (Guid.TryParse(channel, out Guid documentKey) is false)
-        {
-            throw new HubException("Invalid channel.");
-        }
-
-        ContentAuthorizationStatus status = await contentPermissionService.AuthorizeAccessAsync(
-            user, documentKey, ActionBrowse.ActionLetter);
-
-        if (status != ContentAuthorizationStatus.Success)
-        {
-            throw new HubException("You do not have access to this document.");
-        }
-
-        return documentKey.ToString();
-    }
+        => await channelAccess.AuthorizeAsync(user, channel)
+            ?? throw new HubException("You do not have access to this channel.");
 }

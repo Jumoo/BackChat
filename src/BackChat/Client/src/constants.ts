@@ -10,3 +10,11 @@ export const BackChatTimeOptions: Intl.DateTimeFormatOptions = {
   hour: "numeric",
   minute: "numeric",
 };
+
+// Badges stop counting here, so a busy channel shows "9+" rather than a wide number
+export const BACKCHAT_BADGE_MAX = 9;
+
+export const formatBadgeCount = (count: number) =>
+  count > BACKCHAT_BADGE_MAX ? `${BACKCHAT_BADGE_MAX}+` : `${count}`;
+
+export const BACKCHAT_COMMS_WORKSPACE_VIEW_ALIAS = "BackChat.WorkspaceView.Comms";

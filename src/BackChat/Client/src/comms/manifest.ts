@@ -1,8 +1,14 @@
 import { BACKCHAT_COMMS_APP_TYPE, type ManifestBackChatCommsApp } from "./comms-app.extension";
+import { BACKCHAT_COMMS_WORKSPACE_VIEW_ALIAS } from "../constants";
+
+const documentWorkspaceCondition = {
+  alias: "Umb.Condition.WorkspaceAlias",
+  match: "Umb.Workspace.Document",
+};
 
 const commsWorkspaceView: UmbExtensionManifest = {
   type: "workspaceView",
-  alias: "BackChat.WorkspaceView.Comms",
+  alias: BACKCHAT_COMMS_WORKSPACE_VIEW_ALIAS,
   name: "BackChat Comms Workspace View",
   element: () => import("./comms-workspace-view.element"),
   weight: 4,
@@ -11,12 +17,16 @@ const commsWorkspaceView: UmbExtensionManifest = {
     pathname: "comms",
     label: "#backchat_commsTab",
   },
-  conditions: [
-    {
-      alias: "Umb.Condition.WorkspaceAlias",
-      match: "Umb.Workspace.Document",
-    },
-  ],
+  conditions: [documentWorkspaceCondition],
+};
+
+// Shows the document's unread count on the comms tab
+const unreadHintWorkspaceContext: UmbExtensionManifest = {
+  type: "workspaceContext",
+  alias: "BackChat.WorkspaceContext.UnreadHint",
+  name: "BackChat Unread Hint Workspace Context",
+  api: () => import("./unread-hint.workspace-context"),
+  conditions: [documentWorkspaceCondition],
 };
 
 // Apps on the comms tab. Add new ones here (or from another package) with the same type.
@@ -31,4 +41,4 @@ const chatCommsApp: ManifestBackChatCommsApp = {
   },
 };
 
-export const manifests = [commsWorkspaceView, chatCommsApp];
+export const manifests = [commsWorkspaceView, unreadHintWorkspaceContext, chatCommsApp];

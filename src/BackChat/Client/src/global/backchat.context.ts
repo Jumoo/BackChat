@@ -12,7 +12,7 @@ import {
   type IRetryPolicy,
 } from "@umbraco-cms/backoffice/external/signalr";
 import { BACKCHAT_HUB_PATH } from "../constants";
-import type { ChatMessage } from "../signalR/types";
+import type { ChatMessage, UnreadCount } from "../signalR/types";
 import { BACKCHAT_CONTEXT } from "./backchat.context.token";
 
 // Keep trying with backoff (up to 30 seconds apart) rather than giving up after a few
@@ -35,6 +35,12 @@ export class BackChatContext extends UmbContextBase {
   #isConnected = new UmbBooleanState(false);
   public readonly isConnected = this.#isConnected.asObservable();
 
+  // Only channels with something unread are held; the server sends a zero count to clear one
+  #unread = new UmbArrayState<UnreadCount>([], (c) => c.channel);
+  public readonly unread = this.#unread.asObservable();
+  public readonly totalUnread = this.#unread.asObservablePart((list) => list.reduce((sum, c) => sum + c.unread, 0));
+  public readonly totalMentions = this.#unread.asObservablePart((list) => list.reduce((sum, c) => sum + c.mentions, 0));
+
   constructor(host: UmbControllerHost) {
     super(host, BACKCHAT_CONTEXT);
 
@@ -51,6 +57,22 @@ export class BackChatContext extends UmbContextBase {
 
   messagesOf(channel: string) {
     return this.#messages.asObservablePart((list) => list.filter((m) => m.channel === channel));
+  }
+
+  unreadOf(channel: string) {
+    return this.#unread.asObservablePart((list) => list.find((c) => c.channel === channel));
+  }
+
+  /**
+   * Marks the channel read. Call it only while the chat is actually on screen; the
+   * server then clears the count in every tab the user has open.
+   */
+  async markRead(channel: string) {
+    if (this.#connection?.state !== HubConnectionState.Connected) return;
+
+    await this.#connection
+      .invoke("MarkRead", channel)
+      .catch((error) => console.error(`BackChat: could not mark ${channel} read`, error));
   }
 
   joinChannel(channel: string) {
@@ -122,6 +144,19 @@ export class BackChatContext extends UmbContextBase {
       this.#messages.appendOne(message);
     });
 
+    // The full set on connect, then one channel at a time as they change
+    connection.on("unread", (counts: UnreadCount[]) => {
+      this.#unread.setValue(counts.filter((c) => c.unread > 0));
+    });
+
+    connection.on("unreadChanged", (count: UnreadCount) => {
+      if (count.unread > 0) {
+        this.#unread.appendOne(count);
+      } else {
+        this.#unread.removeOne(count.channel);
+      }
+    });
+
     // Group membership is per connection, so join every channel again after a reconnect
     connection.onreconnecting(() => this.#setConnected(connection, false));
     connection.onreconnected(() => {
@@ -146,6 +181,7 @@ export class BackChatContext extends UmbContextBase {
     const connection = this.#connection;
     this.#connection = undefined;
     this.#isConnected.setValue(false);
+    this.#unread.setValue([]);
     connection?.stop();
   }
 
