@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
+    <!-- CI restores in locked mode, so the lock file has to be committed -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>Umbraco.Community.BackChat</Product>
+    <PackageId>Umbraco.Community.BackChat</PackageId>
+    <Title>Back Chat</Title>
+    <Description>Chat for the Umbraco backoffice. Talk to other backoffice users in a global channel, or on the document you are editing.</Description>
+    <PackageTags>umbraco;umbraco-marketplace;backoffice;chat</PackageTags>
+    <Authors>Kevin Jump</Authors>
+    <Copyright>$([System.DateTime]::UtcNow.ToString(`yyyy`)) © Kevin Jump</Copyright>
+    <PackageProjectUrl>https://github.com/Jumoo/BackChat</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Jumoo/BackChat</RepositoryUrl>
+    <PackageReadmeFile>README_nuget.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Umbraco 17 only (LTS). Pinned to the floor we test against; Dependabot is told to leave these alone. -->
+    <PackageReference Include="Umbraco.Cms.Web.Website" Version="17.7.1" />
+    <PackageReference Include="Umbraco.Cms.Web.Common" Version="17.7.1" />
+    <PackageReference Include="Umbraco.Cms.Api.Common" Version="17.7.1" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" Version="17.7.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The client folder is source, not content. The built bundle lands in wwwroot/App_Plugins/BackChat -->
+    <Content Remove="Client\**" />
+    <None Remove="Client\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\docs\README_nuget.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
