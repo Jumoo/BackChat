@@ -104,111 +104,141 @@ export class BackChatReviewCommsAppElement extends UmbLitElement {
     return nothing;
   }
 
+  // The headline fact: when it's due, as a tag that turns red with an alert icon once overdue
   #renderNext(state: ReviewState) {
-    if (!state.nextReview) return html`<p class="next">${this.localize.term("backchat_reviewNone")}</p>`;
+    if (!state.nextReview) {
+      return html`<uui-tag look="secondary"><span class="tag-content"><umb-icon name="icon-calendar"></umb-icon> ${this.localize.term("backchat_reviewNone")}</span></uui-tag>`;
+    }
 
     const overdue = new Date(state.nextReview) <= new Date();
-    return html`<p class="next ${overdue ? "overdue" : ""}">
-      ${overdue ? html`<uui-icon name="icon-alert"></uui-icon>` : nothing}
-      ${this.localize.term(overdue ? "backchat_reviewOverdue" : "backchat_reviewBy", this.localize.date(state.nextReview, DateOptions))}
-    </p>`;
+    const date = this.localize.date(state.nextReview, DateOptions);
+    return overdue
+      ? html`<uui-tag look="primary" color="danger"><span class="tag-content"><umb-icon name="icon-alert"></umb-icon> ${this.localize.term("backchat_reviewOverdue", date)}</span></uui-tag>`
+      : html`<uui-tag look="secondary"><span class="tag-content"><umb-icon name="icon-calendar"></umb-icon> ${this.localize.term("backchat_reviewBy", date)}</span></uui-tag>`;
+  }
+
+  #renderBody(state: ReviewState) {
+    return html`
+      <section class="status">
+        ${this.#renderNext(state)}
+        <p class="hint">${this.#renderSource(state)}</p>
+      </section>
+
+      <section>
+        <h5>${this.localize.term("backchat_reviewDate")}</h5>
+        <uui-input
+          type="date"
+          label=${this.localize.term("backchat_reviewDate")}
+          .value=${this._date}
+          @change=${(e: Event) => (this._date = (e.target as HTMLInputElement).value)}
+        ></uui-input>
+        <div class="buttons">
+          ${state.setManually
+            ? html`<uui-button
+                look="secondary"
+                label=${this.localize.term("backchat_reviewUseRule")}
+                ?disabled=${this._busy}
+                @click=${() => this.#setDate(null)}
+              ></uui-button>`
+            : nothing}
+          <uui-button
+            look="secondary"
+            label=${this.localize.term("backchat_reviewSetDate")}
+            ?disabled=${!this._date || this._busy}
+            @click=${() => this.#setDate(this._date)}
+          ></uui-button>
+        </div>
+      </section>
+
+      <section>
+        <h5>${this.localize.term("backchat_markReviewed")}</h5>
+        <uui-textarea
+          label=${this.localize.term("backchat_reviewNote")}
+          placeholder=${this.localize.term("backchat_reviewNote")}
+          maxlength="1000"
+          .value=${this._note}
+          @input=${(e: Event) => (this._note = (e.target as HTMLTextAreaElement).value)}
+        ></uui-textarea>
+        <div class="buttons">
+          <uui-button
+            look="primary"
+            color="positive"
+            label=${this.localize.term("backchat_markReviewed")}
+            .state=${this._busy ? "waiting" : undefined}
+            @click=${this.#markReviewed}
+          ></uui-button>
+        </div>
+      </section>
+
+      ${state.history.length
+        ? html`<section>
+            <h5>${this.localize.term("backchat_reviewHistory")}</h5>
+            <ul>
+              ${state.history.map(
+                (h) => html`<li>
+                  <umb-icon name="icon-check"></umb-icon>
+                  <div>
+                    <span class="who">${h.reviewedByName}</span>
+                    <span class="when">${this.localize.date(h.date, DateOptions)}</span>
+                    ${h.note ? html`<p class="note">${h.note}</p>` : nothing}
+                  </div>
+                </li>`
+              )}
+            </ul>
+          </section>`
+        : nothing}
+    `;
   }
 
   override render() {
     const state = this._state;
 
     return html`
-      <backchat-comms-app-layout headline="#backchat_review">
+      <backchat-comms-app-layout headline="#backchat_review" icon="icon-calendar">
         ${this._isNew !== false || !state
           ? html`<p class="hint">${this.localize.term("backchat_saveToStart")}</p>`
-          : html`
-              ${this.#renderNext(state)}
-              <p class="hint">${this.#renderSource(state)}</p>
-
-              <div class="row">
-                <uui-input
-                  type="date"
-                  label=${this.localize.term("backchat_reviewDate")}
-                  .value=${this._date}
-                  @change=${(e: Event) => (this._date = (e.target as HTMLInputElement).value)}
-                ></uui-input>
-                <uui-button
-                  look="secondary"
-                  label=${this.localize.term("backchat_reviewSetDate")}
-                  ?disabled=${!this._date || this._busy}
-                  @click=${() => this.#setDate(this._date)}
-                ></uui-button>
-                ${state.setManually
-                  ? html`<uui-button
-                      label=${this.localize.term("backchat_reviewUseRule")}
-                      ?disabled=${this._busy}
-                      @click=${() => this.#setDate(null)}
-                    ></uui-button>`
-                  : nothing}
-              </div>
-
-              <uui-textarea
-                label=${this.localize.term("backchat_reviewNote")}
-                placeholder=${this.localize.term("backchat_reviewNote")}
-                maxlength="1000"
-                .value=${this._note}
-                @input=${(e: Event) => (this._note = (e.target as HTMLTextAreaElement).value)}
-              ></uui-textarea>
-              <uui-button
-                look="primary"
-                color="positive"
-                label=${this.localize.term("backchat_markReviewed")}
-                .state=${this._busy ? "waiting" : undefined}
-                @click=${this.#markReviewed}
-              ></uui-button>
-
-              ${state.history.length
-                ? html`<h4>${this.localize.term("backchat_reviewHistory")}</h4>
-                    <ul>
-                      ${state.history.map(
-                        (h) => html`<li>
-                          <span class="who">${h.reviewedByName}</span>
-                          <span class="when">${this.localize.date(h.date, DateOptions)}</span>
-                          ${h.note ? html`<span class="note">${h.note}</span>` : nothing}
-                        </li>`
-                      )}
-                    </ul>`
-                : nothing}
-            `}
+          : this.#renderBody(state)}
       </backchat-comms-app-layout>
     `;
   }
 
   static override styles = css`
-    .next {
-      margin: 0;
-      font-weight: 700;
+    /* Icon and text side by side inside a tag */
+    .tag-content {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--uui-size-space-1);
+      white-space: nowrap;
+    }
+    section + section {
+      margin-top: var(--uui-size-space-5);
+      padding-top: var(--uui-size-space-4);
+      border-top: 1px solid var(--uui-color-divider);
     }
 
-    .next.overdue {
-      color: var(--uui-color-danger-standalone);
+    h5 {
+      margin: 0 0 var(--uui-size-space-2);
+      font-size: var(--uui-type-small-size);
+      font-weight: 700;
+      color: var(--uui-color-text-alt);
     }
 
     .hint {
-      margin: var(--uui-size-space-1) 0 var(--uui-size-space-3);
+      margin: var(--uui-size-space-2) 0 0;
       color: var(--uui-color-text-alt);
       font-size: var(--uui-type-small-size);
     }
 
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--uui-size-space-2);
-      margin-bottom: var(--uui-size-space-3);
-    }
-
+    uui-input,
     uui-textarea {
       width: 100%;
-      margin-bottom: var(--uui-size-space-2);
     }
 
-    h4 {
-      margin: var(--uui-size-space-5) 0 var(--uui-size-space-2);
+    .buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--uui-size-space-2);
+      margin-top: var(--uui-size-space-2);
     }
 
     ul {
@@ -219,10 +249,14 @@ export class BackChatReviewCommsAppElement extends UmbLitElement {
 
     li {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0 var(--uui-size-space-2);
+      align-items: flex-start;
+      gap: var(--uui-size-space-3);
       padding: var(--uui-size-space-2) 0;
-      border-bottom: 1px solid var(--uui-color-divider);
+    }
+
+    li umb-icon {
+      margin-top: var(--uui-size-space-1);
+      color: var(--uui-color-positive-standalone);
     }
 
     .who {
@@ -230,11 +264,13 @@ export class BackChatReviewCommsAppElement extends UmbLitElement {
     }
 
     .when {
+      margin-left: var(--uui-size-space-2);
       color: var(--uui-color-text-alt);
+      font-size: var(--uui-type-small-size);
     }
 
     .note {
-      flex-basis: 100%;
+      margin: var(--uui-size-space-1) 0 0;
       white-space: pre-wrap;
     }
   `;

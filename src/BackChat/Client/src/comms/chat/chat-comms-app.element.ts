@@ -28,7 +28,7 @@ export class BackChatChatCommsAppElement extends UmbLitElement {
     const canChat = !!this._unique && this._isNew === false;
 
     return html`
-      <backchat-comms-app-layout headline="#backchat_chat" ?fill=${canChat}>
+      <backchat-comms-app-layout headline="#backchat_chat" icon="icon-chat" ?fill=${canChat}>
         ${canChat
           ? html`<backchat-chat-messages .channel=${this._unique!}></backchat-chat-messages>`
           : html`<p>${this.localize.term("backchat_saveToStart")}</p>`}
