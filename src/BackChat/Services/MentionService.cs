@@ -101,6 +101,6 @@ public partial class MentionService(
     }
 
     // People only: API users can't read a chat, and disabled users can't sign in
-    private static bool IsMentionable(IUser user)
+    public static bool IsMentionable(IUser user)
         => user.Kind == UserKind.Default && user.UserState != UserState.Disabled;
 }

@@ -1,3 +1,4 @@
+using BackChat.Security;
 using Umbraco.Cms.Core.Actions;
 using Umbraco.Cms.Core.Models.Membership;
 using Umbraco.Cms.Core.Services;
@@ -16,24 +17,44 @@ public class ChannelAccessService(IContentPermissionService contentPermissionSer
     /// channel is invalid or the user has no access.
     /// </summary>
     /// <remarks>
-    /// A channel is either the global channel or a document key. Document channels need browse
-    /// access to the document, so a chat is only visible to users who can see it.
+    /// <list type="bullet">
+    /// <item>Global: everyone.</item>
+    /// <item>Document: browse access to the document, so a chat is only visible to users who can see it.</item>
+    /// <item>Direct: the people in it.</item>
+    /// <item>Group: the group's current members, checked live so leaving a group removes access
+    /// straight away. Users allowed to message groups can use any group's conversation.</item>
+    /// </list>
     /// </remarks>
     public async Task<string?> AuthorizeAsync(IUser user, string channel)
     {
-        if (channel == Constants.GlobalChannel)
+        switch (Channels.KindOf(channel))
         {
-            return channel;
+            case ChannelKind.Global:
+                return channel;
+
+            case ChannelKind.Document:
+                Guid documentKey = Guid.Parse(channel);
+                ContentAuthorizationStatus status = await contentPermissionService.AuthorizeAccessAsync(
+                    user, documentKey, ActionBrowse.ActionLetter);
+                return status == ContentAuthorizationStatus.Success ? documentKey.ToString() : null;
+
+            case ChannelKind.Direct:
+                IReadOnlyList<Guid>? participants = Channels.ParseDirect(channel);
+                return participants is not null && participants.Contains(user.Key)
+                    ? Channels.Direct(participants)
+                    : null;
+
+            case ChannelKind.Group:
+                Guid? groupKey = Channels.ParseGroup(channel);
+                if (groupKey is null) return null;
+                return IsInGroup(user, groupKey.Value) || user.Has(BackChatPermissions.MessageGroups)
+                    ? Channels.Group(groupKey.Value)
+                    : null;
+
+            default:
+                return null;
         }
-
-        if (Guid.TryParse(channel, out Guid documentKey) is false)
-        {
-            return null;
-        }
-
-        ContentAuthorizationStatus status = await contentPermissionService.AuthorizeAccessAsync(
-            user, documentKey, ActionBrowse.ActionLetter);
-
-        return status == ContentAuthorizationStatus.Success ? documentKey.ToString() : null;
     }
+
+    public static bool IsInGroup(IUser user, Guid groupKey) => user.Groups.Any(g => g.Key == groupKey);
 }

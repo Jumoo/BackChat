@@ -21,6 +21,21 @@ public interface IChatMessageStore
     IReadOnlyList<string> GetChannelsPostedIn(Guid userKey);
 
     /// <summary>
+    /// The direct conversations with messages that the user is in.
+    /// </summary>
+    IReadOnlyList<string> GetDirectChannels(Guid userKey);
+
+    /// <summary>
+    /// Which of the given channels have any messages.
+    /// </summary>
+    IReadOnlyList<string> GetChannelsWithMessages(IEnumerable<string> channels);
+
+    /// <summary>
+    /// The newest message in a channel, if it has any.
+    /// </summary>
+    ChatMessage? GetLatest(string channel);
+
+    /// <summary>
     /// The users who have posted in a channel.
     /// </summary>
     IReadOnlyList<Guid> GetPosters(string channel);

@@ -17,6 +17,8 @@ public class BackChatHub(
     IReadStateStore readStateStore,
     IMentionStore mentionStore,
     MentionService mentionService,
+    ConversationService conversationService,
+    IUserGroupService userGroupService,
     BackChatConnections connections,
     BackChatNotifier notifier) : Hub
 {
@@ -108,6 +110,59 @@ public class BackChatHub(
     {
         await GetCurrentUserAsync();
         return await mentionService.GetMentionablesAsync();
+    }
+
+    /// <summary>
+    /// The conversations for the header chat: global, the caller's direct and group
+    /// conversations, and document chats with something unread.
+    /// </summary>
+    public async Task<IReadOnlyList<Conversation>> GetConversations()
+        => await conversationService.GetConversationsAsync(await GetCurrentUserAsync());
+
+    /// <summary>
+    /// Opens a direct conversation between the caller and the given people. The same people
+    /// always get the same conversation. Nothing is stored until someone sends a message.
+    /// </summary>
+    public async Task<Conversation> StartDirectConversation(Guid[] userKeys)
+    {
+        IUser user = await GetCurrentUserAsync();
+
+        var participants = userKeys.Append(user.Key).Distinct().ToList();
+        if (participants.Count < 2 || participants.Count > Channels.MaxDirectParticipants)
+        {
+            throw new HubException($"A conversation is between 2 and {Channels.MaxDirectParticipants} people.");
+        }
+
+        foreach (Guid key in participants)
+        {
+            IUser? participant = await userService.GetAsync(key);
+            if (participant is null || MentionService.IsMentionable(participant) is false)
+            {
+                throw new HubException("One of those people can't be messaged.");
+            }
+        }
+
+        string channel = Channels.Direct(participants);
+        return (await conversationService.GetConversationAsync(channel))!;
+    }
+
+    /// <summary>
+    /// Opens the conversation for a user group. Needs the permission to message groups.
+    /// </summary>
+    public async Task<Conversation> StartGroupConversation(Guid groupKey)
+    {
+        IUser user = await GetCurrentUserAsync();
+        if (user.Has(BackChatPermissions.MessageGroups) is false)
+        {
+            throw new HubException("You don't have permission to message user groups.");
+        }
+
+        if (await userGroupService.GetAsync(groupKey) is null)
+        {
+            throw new HubException("No such user group.");
+        }
+
+        return (await conversationService.GetConversationAsync(Channels.Group(groupKey)))!;
     }
 
     /// <summary>
