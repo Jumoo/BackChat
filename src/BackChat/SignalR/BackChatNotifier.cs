@@ -46,7 +46,7 @@ public class BackChatNotifier(
     {
         IEnumerable<Guid> candidates = connections.Users.Where(key => key != senderKey);
 
-        foreach (Guid userKey in unreadService.GetUsersCounting(channel, candidates))
+        foreach (Guid userKey in await unreadService.GetUsersCountingAsync(channel, candidates))
         {
             IUser? user = await userService.GetAsync(userKey);
             if (user is null || await channelAccess.AuthorizeAsync(user, channel) is null)

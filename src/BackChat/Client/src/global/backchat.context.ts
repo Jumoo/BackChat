@@ -15,7 +15,7 @@ import {
   type IRetryPolicy,
 } from "@umbraco-cms/backoffice/external/signalr";
 import { BACKCHAT_HUB_PATH } from "../constants";
-import type { ChatMessage, Mentionables, SendMessageResult, UnreadCount } from "../signalR/types";
+import type { ChatMessage, Conversation, Mentionables, SendMessageResult, UnreadCount } from "../signalR/types";
 import { toPlainText } from "../mentions/mentions";
 import { BACKCHAT_CONTEXT } from "./backchat.context.token";
 
@@ -41,6 +41,13 @@ export class BackChatContext extends UmbContextBase {
   // Users and groups for the mention picker and for showing names in messages
   #mentionables = new UmbObjectState<Mentionables>({ users: [], groups: [] });
   public readonly mentionables = this.#mentionables.asObservable();
+
+  // The header chat's list of conversations. Loaded when the list is shown, and kept up to
+  // date from then on as messages arrive.
+  #conversations = new UmbArrayState<Conversation>([], (c) => c.channel);
+  public readonly conversations = this.#conversations.asObservable();
+  #conversationsWanted = false;
+  #reloadTimer?: ReturnType<typeof setTimeout>;
 
   // The current user's permissions, from all their groups. Used to hide what they can't do;
   // the server checks again on every guarded action.
@@ -82,6 +89,46 @@ export class BackChatContext extends UmbContextBase {
 
   messagesOf(channel: string) {
     return this.#messages.asObservablePart((list) => list.filter((m) => m.channel === channel));
+  }
+
+  /** Loads the conversation list, and keeps it current from then on. */
+  async loadConversations() {
+    this.#conversationsWanted = true;
+    if (this.#connection?.state !== HubConnectionState.Connected) return;
+
+    try {
+      this.#conversations.setValue(await this.#connection.invoke<Conversation[]>("GetConversations"));
+    } catch (error) {
+      console.error("BackChat: could not load conversations", error);
+    }
+  }
+
+  // A new conversation can appear from any message, so reload rather than patch the list;
+  // batched, as one message can bring several updates
+  #reloadConversationsSoon() {
+    if (!this.#conversationsWanted) return;
+    clearTimeout(this.#reloadTimer);
+    this.#reloadTimer = setTimeout(() => this.loadConversations(), 300);
+  }
+
+  async startDirectConversation(userKeys: string[]) {
+    return await this.#invokeConversation("StartDirectConversation", userKeys);
+  }
+
+  async startGroupConversation(groupKey: string) {
+    return await this.#invokeConversation("StartGroupConversation", groupKey);
+  }
+
+  async #invokeConversation(method: string, arg: unknown): Promise<Conversation> {
+    if (this.#connection?.state !== HubConnectionState.Connected) {
+      throw new Error("Not connected");
+    }
+
+    const conversation = await this.#connection.invoke<Conversation>(method, arg);
+    if (!this.#conversations.getValue().some((c) => c.channel === conversation.channel)) {
+      this.#conversations.appendOne(conversation);
+    }
+    return conversation;
   }
 
   hasPermission(permission: string) {
@@ -205,6 +252,7 @@ export class BackChatContext extends UmbContextBase {
 
     connection.on("chat", (message: ChatMessage) => {
       this.#messages.appendOne(message);
+      this.#conversations.updateOne(message.channel, { latest: message });
     });
 
     connection.on("mention", (message: ChatMessage) => this.#onMention(message));
@@ -215,6 +263,7 @@ export class BackChatContext extends UmbContextBase {
     });
 
     connection.on("unreadChanged", (count: UnreadCount) => {
+      this.#reloadConversationsSoon();
       if (count.unread > 0) {
         this.#unread.appendOne(count);
       } else {
@@ -228,6 +277,7 @@ export class BackChatContext extends UmbContextBase {
       this.#setConnected(connection, true);
       this.#joinAll(connection);
       this.#loadMentionables(connection);
+      this.#reloadConversationsSoon();
     });
     connection.onclose(() => this.#setConnected(connection, false));
 
@@ -237,6 +287,7 @@ export class BackChatContext extends UmbContextBase {
         this.#setConnected(connection, true);
         this.#joinAll(connection);
         this.#loadMentionables(connection);
+        this.#reloadConversationsSoon();
       })
       .catch((error) => {
         this.#setConnected(connection, false);

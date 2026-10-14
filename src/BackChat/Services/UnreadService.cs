@@ -1,4 +1,5 @@
 using Umbraco.Cms.Core.Models.Membership;
+using Umbraco.Cms.Core.Services;
 
 namespace BackChat.Services;
 
@@ -14,34 +15,60 @@ public record UnreadCount(string Channel, int Unread, int Mentions);
 /// </summary>
 /// <remarks>
 /// Counting every document chat for every user would be noise, so a document channel only
-/// counts once the user has posted or been mentioned in it. The global channel always counts.
+/// counts once the user has posted or been mentioned in it. The global channel always counts,
+/// and so do the user's direct conversations and their groups' conversations.
 /// </remarks>
 public class UnreadService(
     IChatMessageStore messageStore,
     IReadStateStore readStateStore,
     IMentionStore mentionStore,
-    ChannelAccessService channelAccess)
+    ChannelAccessService channelAccess,
+    IUserService userService,
+    IUserGroupService userGroupService)
 {
-    public IReadOnlyCollection<string> GetCountedChannels(Guid userKey)
+    public IReadOnlyCollection<string> GetCountedChannels(IUser user)
     {
         var channels = new HashSet<string> { Constants.GlobalChannel };
-        channels.UnionWith(messageStore.GetChannelsPostedIn(userKey));
-        channels.UnionWith(mentionStore.GetChannelsMentionedIn(userKey));
+        channels.UnionWith(messageStore.GetChannelsPostedIn(user.Key));
+        channels.UnionWith(mentionStore.GetChannelsMentionedIn(user.Key));
+        channels.UnionWith(messageStore.GetDirectChannels(user.Key));
+        channels.UnionWith(messageStore.GetChannelsWithMessages(user.Groups.Select(g => Channels.Group(g.Key))));
         return channels;
     }
 
     /// <summary>
     /// Whether the channel counts for each of the given users. Returns the ones it counts for.
     /// </summary>
-    public IReadOnlyCollection<Guid> GetUsersCounting(string channel, IEnumerable<Guid> userKeys)
+    public async Task<IReadOnlyCollection<Guid>> GetUsersCountingAsync(string channel, IEnumerable<Guid> userKeys)
     {
-        if (channel == Constants.GlobalChannel)
+        var counting = new HashSet<Guid>();
+
+        switch (Channels.KindOf(channel))
         {
-            return userKeys.ToList();
+            case ChannelKind.Global:
+                return userKeys.ToList();
+
+            case ChannelKind.Direct:
+                counting.UnionWith(Channels.ParseDirect(channel) ?? []);
+                break;
+
+            case ChannelKind.Group:
+                Guid? groupKey = Channels.ParseGroup(channel);
+                IUserGroup? group = groupKey is null ? null : await userGroupService.GetAsync(groupKey.Value);
+                if (group is not null)
+                {
+                    counting.UnionWith(userService.GetAllInGroup(group.Id).Select(u => u.Key));
+                }
+
+                counting.UnionWith(messageStore.GetPosters(channel));
+                break;
+
+            default:
+                counting.UnionWith(messageStore.GetPosters(channel));
+                counting.UnionWith(mentionStore.GetMentionedUsers(channel));
+                break;
         }
 
-        var counting = messageStore.GetPosters(channel).ToHashSet();
-        counting.UnionWith(mentionStore.GetMentionedUsers(channel));
         return userKeys.Where(counting.Contains).ToList();
     }
 
@@ -54,7 +81,7 @@ public class UnreadService(
         IReadOnlyDictionary<string, DateTime> lastRead = readStateStore.GetLastRead(user.Key);
         var counts = new List<UnreadCount>();
 
-        foreach (string channel in GetCountedChannels(user.Key))
+        foreach (string channel in GetCountedChannels(user))
         {
             if (await channelAccess.AuthorizeAsync(user, channel) is null)
             {

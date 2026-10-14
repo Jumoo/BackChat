@@ -34,3 +34,14 @@ export interface SendMessageResult {
   // People the sender mentioned by name who can't see the chat
   unreachable: string[];
 }
+
+export type ChannelKind = "Global" | "Document" | "Direct" | "Group";
+
+export interface Conversation {
+  channel: string;
+  kind: ChannelKind;
+  // Group or document name. Direct conversations are named from their participants.
+  title?: string;
+  participants: string[];
+  latest?: ChatMessage;
+}

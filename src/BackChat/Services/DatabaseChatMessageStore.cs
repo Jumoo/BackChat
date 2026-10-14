@@ -61,6 +61,50 @@ public class DatabaseChatMessageStore(IScopeProvider scopeProvider) : IChatMessa
         return scope.Database.Fetch<string>(sql);
     }
 
+    public IReadOnlyList<string> GetDirectChannels(Guid userKey)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        string key = userKey.ToString();
+        var sql = scope.SqlContext.Sql()
+            .SelectDistinct<ChatMessageDto>(x => x.Channel)
+            .From<ChatMessageDto>()
+            .Where<ChatMessageDto>(x => x.Channel.StartsWith(Channels.DirectPrefix) && x.Channel.Contains(key));
+
+        return scope.Database.Fetch<string>(sql);
+    }
+
+    public IReadOnlyList<string> GetChannelsWithMessages(IEnumerable<string> channels)
+    {
+        var list = channels.ToList();
+        if (list.Count == 0)
+        {
+            return [];
+        }
+
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .SelectDistinct<ChatMessageDto>(x => x.Channel)
+            .From<ChatMessageDto>()
+            .WhereIn<ChatMessageDto>(x => x.Channel, list);
+
+        return scope.Database.Fetch<string>(sql);
+    }
+
+    public ChatMessage? GetLatest(string channel)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .Select<ChatMessageDto>()
+            .From<ChatMessageDto>()
+            .Where<ChatMessageDto>(x => x.Channel == channel)
+            .OrderByDescending<ChatMessageDto>(x => x.Date);
+
+        return scope.Database.Page<ChatMessageDto>(1, 1, sql).Items.FirstOrDefault()?.ToChatMessage();
+    }
+
     public IReadOnlyList<Guid> GetPosters(string channel)
     {
         using IScope scope = scopeProvider.CreateScope(autoComplete: true);
