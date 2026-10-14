@@ -1,0 +1,14 @@
+{
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "AuthorDetails": {
+    "Name": "Kevin Jump",
+    "ImageUrl": "https://github.com/KevinJump.png"
+  },
+  "Category": "Back Office",
+  "Description": "Chat for the Umbraco backoffice. Talk to other backoffice users in a global channel, or on the document you are editing.",
+  "LicenseTypes": [ "Free" ],
+  "IssueTrackerUrl": "https://github.com/Jumoo/BackChat/issues",
+  "PackageType": "Package",
+  "Tags": [ "chat", "communication" ],
+  "Title": "Back Chat"
+}
