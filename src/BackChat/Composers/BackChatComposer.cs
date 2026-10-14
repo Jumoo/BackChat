@@ -15,7 +15,9 @@ public class BackChatComposer : IComposer
     {
         builder.Services.AddSingleton<IChatMessageStore, DatabaseChatMessageStore>();
         builder.Services.AddSingleton<IReadStateStore, DatabaseReadStateStore>();
+        builder.Services.AddSingleton<IMentionStore, DatabaseMentionStore>();
         builder.Services.AddSingleton<ChannelAccessService>();
+        builder.Services.AddSingleton<MentionService>();
         builder.Services.AddSingleton<UnreadService>();
 
         builder.AddBackChatHub();

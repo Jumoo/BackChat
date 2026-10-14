@@ -13,3 +13,24 @@ export interface UnreadCount {
   unread: number;
   mentions: number;
 }
+
+export interface MentionableUser {
+  key: string;
+  name: string;
+}
+
+export interface MentionableGroup {
+  key: string;
+  alias: string;
+  name: string;
+}
+
+export interface Mentionables {
+  users: MentionableUser[];
+  groups: MentionableGroup[];
+}
+
+export interface SendMessageResult {
+  // People the sender mentioned by name who can't see the chat
+  unreachable: string[];
+}

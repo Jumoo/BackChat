@@ -31,6 +31,9 @@ export class BackChatChatMessagesElement extends UmbLitElement {
 
   #onVisibilityChange = () => this.#markReadIfVisible();
 
+  // The channel this element has told the context it is showing
+  #openChannel?: string;
+
   constructor() {
     super();
 
@@ -48,11 +51,20 @@ export class BackChatChatMessagesElement extends UmbLitElement {
   override connectedCallback() {
     super.connectedCallback();
     document.addEventListener("visibilitychange", this.#onVisibilityChange);
+    if (this.channel) this.#setOpenChannel(this.channel);
   }
 
   override disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("visibilitychange", this.#onVisibilityChange);
+    this.#setOpenChannel(undefined);
+  }
+
+  #setOpenChannel(channel: string | undefined) {
+    if (channel === this.#openChannel) return;
+    if (this.#openChannel) this.#context?.setChannelOpen(this.#openChannel, false);
+    this.#openChannel = channel;
+    if (channel) this.#context?.setChannelOpen(channel, true);
   }
 
   override willUpdate(changed: PropertyValues) {
@@ -70,6 +82,7 @@ export class BackChatChatMessagesElement extends UmbLitElement {
     if (!this.#context || !this.channel) return;
 
     this.#context.joinChannel(this.channel);
+    if (this.isConnected) this.#setOpenChannel(this.channel);
 
     // The alias replaces the previous subscription when the channel changes
     this.observe(
