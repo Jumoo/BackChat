@@ -5,7 +5,8 @@ import { UMB_SERVER_CONTEXT } from "@umbraco-cms/backoffice/server";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { UMB_CURRENT_USER_CONTEXT } from "@umbraco-cms/backoffice/current-user";
 import { UmbLocalizationController } from "@umbraco-cms/backoffice/localization-api";
-import { UmbArrayState, UmbBooleanState, UmbObjectState } from "@umbraco-cms/backoffice/observable-api";
+import { UMB_MODAL_MANAGER_CONTEXT } from "@umbraco-cms/backoffice/modal";
+import { UmbArrayState, UmbBooleanState, UmbObjectState, UmbStringState } from "@umbraco-cms/backoffice/observable-api";
 import {
   HubConnectionBuilder,
   HubConnectionState,
@@ -15,7 +16,15 @@ import {
   type IRetryPolicy,
 } from "@umbraco-cms/backoffice/external/signalr";
 import { BACKCHAT_HUB_PATH } from "../constants";
-import type { ChatMessage, Conversation, Mentionables, SendMessageResult, UnreadCount } from "../signalR/types";
+import type {
+  ChatMessage,
+  ConfirmationStatus,
+  Conversation,
+  Mentionables,
+  SendMessageResult,
+  UnreadCount,
+} from "../signalR/types";
+import { BACKCHAT_IMPORTANT_MODAL } from "../confirmations/important-modal.token";
 import { toPlainText } from "../mentions/mentions";
 import { BACKCHAT_CONTEXT } from "./backchat.context.token";
 
@@ -49,6 +58,18 @@ export class BackChatContext extends UmbContextBase {
   #conversationsWanted = false;
   #reloadTimer?: ReturnType<typeof setTimeout>;
 
+  // Messages waiting for the current user to confirm them
+  #pending = new UmbArrayState<ChatMessage>([], (m) => m.key);
+  public readonly pending = this.#pending.asObservable();
+
+  // The key of the latest message someone confirmed, for its sender's status view
+  #confirmationChanges = new UmbStringState(undefined);
+  public readonly confirmationChanges = this.#confirmationChanges.asObservable();
+
+  // The important message on screen, so only one is open at a time
+  #importantOpen?: string;
+  #importantModal?: { reject: () => void };
+
   // The current user's permissions, from all their groups. Used to hide what they can't do;
   // the server checks again on every guarded action.
   #permissions = new UmbArrayState<string>([], (p) => p);
@@ -80,6 +101,8 @@ export class BackChatContext extends UmbContextBase {
         "_permissions"
       );
     });
+
+    this.observe(this.pending, (pending) => this.#showImportant(pending), "_showImportant");
 
     this.consumeContext(UMB_SERVER_CONTEXT, (context) => {
       this.#serverContext = context;
@@ -172,6 +195,69 @@ export class BackChatContext extends UmbContextBase {
     return await this.#connection.invoke<SendMessageResult>("SendMessage", channel, text);
   }
 
+  /** Sends a message each recipient must confirm. Important ones hold the screen until they do. */
+  async sendAnnouncement(channel: string, text: string, important: boolean): Promise<SendMessageResult> {
+    if (this.#connection?.state !== HubConnectionState.Connected) {
+      throw new Error("Not connected");
+    }
+
+    return await this.#connection.invoke<SendMessageResult>("SendAnnouncement", channel, text, important);
+  }
+
+  isPending(messageKey: string) {
+    return this.#pending.asObservablePart((list) => list.some((m) => m.key === messageKey));
+  }
+
+  async confirm(messageKey: string) {
+    await this.#connection?.invoke("Confirm", messageKey);
+    this.#pending.removeOne(messageKey);
+  }
+
+  async getConfirmationStatus(messageKey: string) {
+    return await this.#connection!.invoke<ConfirmationStatus>("GetConfirmationStatus", messageKey);
+  }
+
+  async remind(messageKey: string) {
+    return await this.#connection!.invoke<number>("Remind", messageKey);
+  }
+
+  #onConfirmationRequested(message: ChatMessage) {
+    this.#pending.appendOne(message);
+    if (message.important) return;
+
+    // Important ones open as a modal; the rest get a nudge unless that chat is on screen
+    if (!this.#isChannelOnScreen(message.channel)) {
+      this.getContext(UMB_NOTIFICATION_CONTEXT).then((notifications) =>
+        notifications?.peek("warning", {
+          data: {
+            headline: this.#localize.term("backchat_confirmationRequested", message.userName),
+            message: toPlainText(message.message, this.#mentionables.getValue()),
+          },
+        })
+      );
+    }
+  }
+
+  // Opens the oldest unconfirmed important message, and opens it again if it's closed
+  // without being confirmed
+  async #showImportant(pending: ChatMessage[]) {
+    if (this.#importantOpen) return;
+
+    const next = pending.find((m) => m.important);
+    if (!next) return;
+
+    const modalManager = await this.getContext(UMB_MODAL_MANAGER_CONTEXT);
+    if (!modalManager || this.#importantOpen) return;
+
+    this.#importantOpen = next.key;
+    const modal = modalManager.open(this, BACKCHAT_IMPORTANT_MODAL, { data: { message: next } });
+    this.#importantModal = modal;
+    await modal.onSubmit().catch(() => undefined);
+    this.#importantOpen = undefined;
+    this.#importantModal = undefined;
+    this.#showImportant(this.#pending.getValue());
+  }
+
   /** Chat elements report when they show a channel and when they stop. */
   setChannelOpen(channel: string, open: boolean) {
     const count = (this.#openChannels.get(channel) ?? 0) + (open ? 1 : -1);
@@ -256,6 +342,15 @@ export class BackChatContext extends UmbContextBase {
     });
 
     connection.on("mention", (message: ChatMessage) => this.#onMention(message));
+
+    connection.on("pendingConfirmations", (messages: ChatMessage[]) => this.#pending.setValue(messages));
+    connection.on("confirmationRequested", (message: ChatMessage) => this.#onConfirmationRequested(message));
+    // Confirmed in another tab: close it here too
+    connection.on("confirmed", (messageKey: string) => {
+      this.#pending.removeOne(messageKey);
+      if (this.#importantOpen === messageKey) this.#importantModal?.reject();
+    });
+    connection.on("confirmationChanged", (messageKey: string) => this.#confirmationChanges.setValue(messageKey));
 
     // The full set on connect, then one channel at a time as they change
     connection.on("unread", (counts: UnreadCount[]) => {

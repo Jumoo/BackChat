@@ -36,6 +36,14 @@ public class ChatMessageDto
     [Column("date")]
     public DateTime Date { get; set; }
 
+    [Column("requiresConfirmation")]
+    [Constraint(Default = "0")]
+    public bool RequiresConfirmation { get; set; }
+
+    [Column("important")]
+    [Constraint(Default = "0")]
+    public bool Important { get; set; }
+
     public static ChatMessageDto From(ChatMessage message) => new()
     {
         Id = message.Key,
@@ -44,6 +52,8 @@ public class ChatMessageDto
         UserName = message.UserName,
         UserKey = message.UserKey,
         Date = message.Date,
+        RequiresConfirmation = message.RequiresConfirmation,
+        Important = message.Important,
     };
 
     public ChatMessage ToChatMessage() => new()
@@ -54,5 +64,7 @@ public class ChatMessageDto
         UserName = UserName,
         UserKey = UserKey,
         Date = DateTime.SpecifyKind(Date, DateTimeKind.Utc),
+        RequiresConfirmation = RequiresConfirmation,
+        Important = Important,
     };
 }

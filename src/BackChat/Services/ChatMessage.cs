@@ -16,4 +16,15 @@ public class ChatMessage
     public Guid? UserKey { get; init; }
 
     public DateTime Date { get; init; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Each recipient is asked to confirm they've read it.
+    /// </summary>
+    public bool RequiresConfirmation { get; init; }
+
+    /// <summary>
+    /// Opens over the backoffice for each recipient and stays until they confirm it.
+    /// Always requires confirmation.
+    /// </summary>
+    public bool Important { get; init; }
 }

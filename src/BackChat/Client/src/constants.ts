@@ -18,3 +18,8 @@ export const formatBadgeCount = (count: number) =>
   count > BACKCHAT_BADGE_MAX ? `${BACKCHAT_BADGE_MAX}+` : `${count}`;
 
 export const BACKCHAT_COMMS_WORKSPACE_VIEW_ALIAS = "BackChat.WorkspaceView.Comms";
+
+// Channels whose readers are a list of people, so a message there can ask each to confirm.
+// Matches ConfirmationService.CanAskForConfirmation on the server.
+export const canAskForConfirmation = (channel: string) =>
+  channel === BACKCHAT_GLOBAL_CHANNEL || channel.startsWith("dm:") || channel.startsWith("group:");

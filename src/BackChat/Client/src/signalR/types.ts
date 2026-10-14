@@ -5,6 +5,10 @@ export interface ChatMessage {
   userName: string;
   userKey?: string;
   date: string;
+  // Each recipient is asked to confirm they've read it
+  requiresConfirmation?: boolean;
+  // Opens over the backoffice until confirmed
+  important?: boolean;
 }
 
 // Unread messages in one channel. Mentions of the current user are counted separately.
@@ -44,4 +48,15 @@ export interface Conversation {
   title?: string;
   participants: string[];
   latest?: ChatMessage;
+}
+
+export interface RecipientStatus {
+  userKey: string;
+  name: string;
+  confirmed?: string;
+}
+
+export interface ConfirmationStatus {
+  messageKey: string;
+  recipients: RecipientStatus[];
 }

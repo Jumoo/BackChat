@@ -18,6 +18,8 @@ public class BackChatHub(
     IMentionStore mentionStore,
     MentionService mentionService,
     ConversationService conversationService,
+    ConfirmationService confirmationService,
+    IConfirmationStore confirmationStore,
     IUserGroupService userGroupService,
     BackChatConnections connections,
     BackChatNotifier notifier) : Hub
@@ -32,6 +34,7 @@ public class BackChatHub(
         await Groups.AddToGroupAsync(Context.ConnectionId, BackChatNotifier.UserGroupName(user.Key));
 
         await Clients.Caller.SendAsync("unread", await notifier.GetUnreadCountsAsync(user));
+        await Clients.Caller.SendAsync("pendingConfirmations", confirmationService.GetPending(user.Key));
 
         await base.OnConnectedAsync();
     }
@@ -62,6 +65,65 @@ public class BackChatHub(
 
     /// <returns>Anything the sender should know, such as people they mentioned who can't see the chat.</returns>
     public async Task<SendMessageResult> SendMessage(string channel, string message)
+        => await SendAsync(channel, message, requiresConfirmation: false, important: false);
+
+    /// <summary>
+    /// Sends a message that each recipient has to confirm. An important one also opens over
+    /// the backoffice until they do. Needs the announce permission, and a channel whose
+    /// readers are a list of people: global, a group or a direct conversation.
+    /// </summary>
+    public async Task<SendMessageResult> SendAnnouncement(string channel, string message, bool important)
+        => await SendAsync(channel, message, requiresConfirmation: true, important);
+
+    /// <summary>
+    /// Confirms the caller has read a message. Their other tabs close it, and the sender's
+    /// list of who has confirmed updates.
+    /// </summary>
+    public async Task Confirm(Guid messageKey)
+    {
+        IUser user = await GetCurrentUserAsync();
+
+        if (confirmationStore.Confirm(messageKey, user.Key, DateTime.UtcNow) is false)
+        {
+            return;
+        }
+
+        await Clients.Group(BackChatNotifier.UserGroupName(user.Key)).SendAsync("confirmed", messageKey);
+
+        if (messageStore.Get([messageKey]).FirstOrDefault()?.UserKey is Guid senderKey)
+        {
+            await Clients.Group(BackChatNotifier.UserGroupName(senderKey)).SendAsync("confirmationChanged", messageKey);
+        }
+    }
+
+    public async Task<ConfirmationStatus> GetConfirmationStatus(Guid messageKey)
+        => await confirmationService.GetStatusAsync(messageKey, await GetCurrentUserAsync())
+            ?? throw new HubException("You can't see who has confirmed this message.");
+
+    /// <summary>
+    /// Asks everyone who hasn't confirmed a message again. Only its sender can.
+    /// </summary>
+    /// <returns>How many people were reminded.</returns>
+    public async Task<int> Remind(Guid messageKey)
+    {
+        IUser user = await GetCurrentUserAsync();
+
+        ChatMessage? message = messageStore.Get([messageKey]).FirstOrDefault();
+        if (message is null || message.UserKey != user.Key)
+        {
+            throw new HubException("Only the sender can send a reminder.");
+        }
+
+        var waiting = confirmationStore.GetStatus(messageKey).Where(r => r.Confirmed is null).Select(r => r.UserKey).ToList();
+        foreach (Guid userKey in waiting)
+        {
+            await Clients.Group(BackChatNotifier.UserGroupName(userKey)).SendAsync("confirmationRequested", message);
+        }
+
+        return waiting.Count;
+    }
+
+    private async Task<SendMessageResult> SendAsync(string channel, string message, bool requiresConfirmation, bool important)
     {
         if (string.IsNullOrWhiteSpace(message) || message.Length > MaxMessageLength)
         {
@@ -71,12 +133,27 @@ public class BackChatHub(
         IUser user = await GetCurrentUserAsync();
         channel = await AuthorizeChannelAsync(user, channel);
 
+        if (requiresConfirmation)
+        {
+            if (user.Has(BackChatPermissions.Announce) is false)
+            {
+                throw new HubException("You don't have permission to send messages that need confirming.");
+            }
+
+            if (ConfirmationService.CanAskForConfirmation(channel) is false)
+            {
+                throw new HubException("Messages that need confirming go to everyone, a group or chosen people, not a document chat.");
+            }
+        }
+
         var chatMessage = new ChatMessage
         {
             Channel = channel,
             Message = message.Trim(),
             UserName = user.Name ?? user.Username,
             UserKey = user.Key,
+            RequiresConfirmation = requiresConfirmation,
+            Important = important,
         };
 
         // A group mention is close to an announcement, so it needs its own permission
@@ -87,9 +164,13 @@ public class BackChatHub(
         }
 
         MentionResult mentions = await mentionService.ResolveAsync(chatMessage.Message, user, channel);
+        IReadOnlyCollection<Guid> confirmers = requiresConfirmation
+            ? await confirmationService.GetRecipientsAsync(channel, user)
+            : [];
 
         messageStore.Add(chatMessage);
         mentionStore.Add(chatMessage, mentions.Recipients);
+        confirmationStore.AddRecipients(chatMessage.Key, confirmers);
 
         // Replying means you've read the channel
         readStateStore.MarkRead(user.Key, channel, chatMessage.Date);
@@ -98,7 +179,12 @@ public class BackChatHub(
 
         await notifier.SendUnreadCountAsync(user.Key, channel);
         await notifier.ChannelChangedAsync(channel, user.Key);
-        await notifier.SendMentionAsync(mentions.Recipients, chatMessage);
+        await notifier.SendMentionAsync(mentions.Recipients.Except(confirmers), chatMessage);
+
+        foreach (Guid userKey in confirmers)
+        {
+            await Clients.Group(BackChatNotifier.UserGroupName(userKey)).SendAsync("confirmationRequested", chatMessage);
+        }
 
         return new SendMessageResult(mentions.Unreachable);
     }
