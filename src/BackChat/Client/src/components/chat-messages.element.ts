@@ -117,7 +117,7 @@ export class BackChatChatMessagesElement extends UmbLitElement {
                 (m) => m.key,
                 (m) => html`<backchat-chat-bubble
                   .message=${m}
-                  .isCurrentUser=${!!m.userKey && m.userKey === this._currentUserKey}
+                  .isCurrentUser=${m.type !== "activity" && !!m.userKey && m.userKey === this._currentUserKey}
                 ></backchat-chat-bubble>`
               )}
         </div>

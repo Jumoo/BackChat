@@ -1,3 +1,4 @@
+using BackChat.Activity;
 using BackChat.Manifest;
 using BackChat.Persistence;
 using BackChat.Services;
@@ -5,6 +6,7 @@ using BackChat.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Core.Notifications;
 using Umbraco.Cms.Infrastructure.Manifest;
 
 namespace BackChat.Composers;
@@ -22,6 +24,17 @@ public class BackChatComposer : IComposer
         builder.Services.AddSingleton<ConversationService>();
         builder.Services.AddSingleton<IConfirmationStore, DatabaseConfirmationStore>();
         builder.Services.AddSingleton<ConfirmationService>();
+
+        builder.Services.Configure<BackChatActivityOptions>(builder.Config.GetSection(BackChatActivityOptions.Section));
+        builder.Services.AddSingleton<ActivityService>();
+        builder
+            .AddNotificationAsyncHandler<ContentSavedNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentPublishedNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentUnpublishedNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentMovedNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentMovedToRecycleBinNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentCopiedNotification, ContentActivityNotificationHandler>()
+            .AddNotificationAsyncHandler<ContentRolledBackNotification, ContentActivityNotificationHandler>();
 
         builder.AddBackChatHub();
 

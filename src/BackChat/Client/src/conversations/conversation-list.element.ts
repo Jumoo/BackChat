@@ -6,6 +6,7 @@ import type { Conversation, Mentionables, UnreadCount } from "../signalR/types";
 import { BackChatTimeOptions, formatBadgeCount } from "../constants";
 import { toPlainText } from "../mentions/mentions";
 import { conversationIcon, conversationTitle } from "./conversation-title";
+import { activityText, isActivity } from "../activity/activity";
 
 export class BackChatOpenConversationEvent extends Event {
   constructor(public readonly conversation: Conversation) {
@@ -74,9 +75,11 @@ export class BackChatConversationListElement extends UmbLitElement {
           <span class="text">
             <span class="title">${title}</span>
             <span class="preview">
-              ${latest
-                ? `${latest.userName}: ${toPlainText(latest.message, this._mentionables)}`
-                : this.localize.term("backchat_noMessages")}
+              ${!latest
+                ? this.localize.term("backchat_noMessages")
+                : isActivity(latest)
+                  ? activityText(latest, (k, ...a) => this.localize.term(k, ...a))
+                  : `${latest.userName}: ${toPlainText(latest.message, this._mentionables)}`}
             </span>
           </span>
           <span class="side">

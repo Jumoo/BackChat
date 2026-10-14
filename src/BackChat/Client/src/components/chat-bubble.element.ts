@@ -8,6 +8,7 @@ import { parseMessage, type MessageSegment } from "../mentions/mentions";
 import { UMB_MODAL_MANAGER_CONTEXT } from "@umbraco-cms/backoffice/modal";
 import { BACKCHAT_CONFIRMATION_STATUS_MODAL } from "../confirmations/confirmation-status-modal.token";
 import type { BackChatContext } from "../global/backchat.context";
+import { activityText, isActivity } from "../activity/activity";
 
 @customElement("backchat-chat-bubble")
 export class BackChatChatBubbleElement extends UmbLitElement {
@@ -127,6 +128,15 @@ export class BackChatChatBubbleElement extends UmbLitElement {
   override render() {
     if (!this.message) return nothing;
 
+    // Activity lines are a quiet line across the chat, not a bubble
+    if (isActivity(this.message)) {
+      return html`<div class="activity">
+        <uui-icon name="icon-history"></uui-icon>
+        <span>${activityText(this.message, (k, ...a) => this.localize.term(k, ...a))}</span>
+        <span class="time">${this.localize.date(this.message.date, BackChatTimeOptions)}</span>
+      </div>`;
+    }
+
     return html`
       <!-- No whitespace inside .body: it keeps the message's own line breaks (pre-wrap) -->
       <div class="body ${this.message.important ? "important" : ""}">${this.#renderFlag()}${parseMessage(
@@ -197,6 +207,15 @@ export class BackChatChatBubbleElement extends UmbLitElement {
 
     .name {
       font-weight: 700;
+    }
+
+    .activity {
+      align-self: center;
+      display: flex;
+      align-items: center;
+      gap: var(--uui-size-space-2);
+      color: var(--uui-color-text-alt);
+      font-size: var(--uui-type-small-size);
     }
 
     .mention {
