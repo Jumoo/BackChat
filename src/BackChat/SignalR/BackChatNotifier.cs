@@ -28,6 +28,18 @@ public class BackChatNotifier(
             .SendAsync("unreadChanged", unreadService.GetCount(userKey, channel));
 
     /// <summary>
+    /// Tells each mentioned user about the message, so a signed in user gets a toast even if
+    /// they have never opened that chat.
+    /// </summary>
+    public async Task SendMentionAsync(IEnumerable<Guid> userKeys, ChatMessage message)
+    {
+        foreach (Guid userKey in userKeys)
+        {
+            await hubContext.Clients.Group(UserGroupName(userKey)).SendAsync("mention", message);
+        }
+    }
+
+    /// <summary>
     /// A channel has a new message: update the count of everyone signed in that it counts for.
     /// </summary>
     public async Task ChannelChangedAsync(string channel, Guid? senderKey)

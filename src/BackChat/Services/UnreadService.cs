@@ -14,17 +14,19 @@ public record UnreadCount(string Channel, int Unread, int Mentions);
 /// </summary>
 /// <remarks>
 /// Counting every document chat for every user would be noise, so a document channel only
-/// counts once the user has posted in it. The global channel always counts.
+/// counts once the user has posted or been mentioned in it. The global channel always counts.
 /// </remarks>
 public class UnreadService(
     IChatMessageStore messageStore,
     IReadStateStore readStateStore,
+    IMentionStore mentionStore,
     ChannelAccessService channelAccess)
 {
     public IReadOnlyCollection<string> GetCountedChannels(Guid userKey)
     {
         var channels = new HashSet<string> { Constants.GlobalChannel };
         channels.UnionWith(messageStore.GetChannelsPostedIn(userKey));
+        channels.UnionWith(mentionStore.GetChannelsMentionedIn(userKey));
         return channels;
     }
 
@@ -38,8 +40,9 @@ public class UnreadService(
             return userKeys.ToList();
         }
 
-        var posters = messageStore.GetPosters(channel).ToHashSet();
-        return userKeys.Where(posters.Contains).ToList();
+        var counting = messageStore.GetPosters(channel).ToHashSet();
+        counting.UnionWith(mentionStore.GetMentionedUsers(channel));
+        return userKeys.Where(counting.Contains).ToList();
     }
 
     /// <summary>
@@ -74,6 +77,9 @@ public class UnreadService(
     private UnreadCount Count(Guid userKey, string channel, IReadOnlyDictionary<string, DateTime> lastRead)
     {
         DateTime? since = lastRead.TryGetValue(channel, out DateTime date) ? date : null;
-        return new UnreadCount(channel, messageStore.CountSince(channel, since, userKey), 0);
+        return new UnreadCount(
+            channel,
+            messageStore.CountSince(channel, since, userKey),
+            mentionStore.CountSince(userKey, channel, since));
     }
 }

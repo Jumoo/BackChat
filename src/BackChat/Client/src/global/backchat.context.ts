@@ -2,7 +2,9 @@ import { UmbContextBase } from "@umbraco-cms/backoffice/class-api";
 import type { UmbControllerHost } from "@umbraco-cms/backoffice/controller-api";
 import { UMB_AUTH_CONTEXT } from "@umbraco-cms/backoffice/auth";
 import { UMB_SERVER_CONTEXT } from "@umbraco-cms/backoffice/server";
-import { UmbArrayState, UmbBooleanState } from "@umbraco-cms/backoffice/observable-api";
+import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
+import { UmbLocalizationController } from "@umbraco-cms/backoffice/localization-api";
+import { UmbArrayState, UmbBooleanState, UmbObjectState } from "@umbraco-cms/backoffice/observable-api";
 import {
   HubConnectionBuilder,
   HubConnectionState,
@@ -12,7 +14,8 @@ import {
   type IRetryPolicy,
 } from "@umbraco-cms/backoffice/external/signalr";
 import { BACKCHAT_HUB_PATH } from "../constants";
-import type { ChatMessage, UnreadCount } from "../signalR/types";
+import type { ChatMessage, Mentionables, SendMessageResult, UnreadCount } from "../signalR/types";
+import { toPlainText } from "../mentions/mentions";
 import { BACKCHAT_CONTEXT } from "./backchat.context.token";
 
 // Keep trying with backoff (up to 30 seconds apart) rather than giving up after a few
@@ -29,6 +32,14 @@ export class BackChatContext extends UmbContextBase {
   #authContext?: typeof UMB_AUTH_CONTEXT.TYPE;
   #serverContext?: typeof UMB_SERVER_CONTEXT.TYPE;
   #joined = new Set<string>();
+  #localize = new UmbLocalizationController(this);
+
+  // Chats on screen right now, so a mention in one of them doesn't also pop up a toast
+  #openChannels = new Map<string, number>();
+
+  // Users and groups for the mention picker and for showing names in messages
+  #mentionables = new UmbObjectState<Mentionables>({ users: [], groups: [] });
+  public readonly mentionables = this.#mentionables.asObservable();
 
   #messages = new UmbArrayState<ChatMessage>([], (m) => m.key);
 
@@ -88,12 +99,46 @@ export class BackChatContext extends UmbContextBase {
    * Sends a message. Rejects when there is no live connection or the server refuses it,
    * so the caller can keep the text and tell the user.
    */
-  async sendMessage(channel: string, text: string) {
+  async sendMessage(channel: string, text: string): Promise<SendMessageResult> {
     if (this.#connection?.state !== HubConnectionState.Connected) {
       throw new Error("Not connected");
     }
 
-    await this.#connection.invoke("SendMessage", channel, text);
+    return await this.#connection.invoke<SendMessageResult>("SendMessage", channel, text);
+  }
+
+  /** Chat elements report when they show a channel and when they stop. */
+  setChannelOpen(channel: string, open: boolean) {
+    const count = (this.#openChannels.get(channel) ?? 0) + (open ? 1 : -1);
+    if (count > 0) {
+      this.#openChannels.set(channel, count);
+    } else {
+      this.#openChannels.delete(channel);
+    }
+  }
+
+  #isChannelOnScreen(channel: string) {
+    return this.#openChannels.has(channel) && document.visibilityState === "visible";
+  }
+
+  async #loadMentionables(connection: HubConnection) {
+    try {
+      this.#mentionables.setValue(await connection.invoke<Mentionables>("GetMentionables"));
+    } catch (error) {
+      console.error("BackChat: could not load users for mentions", error);
+    }
+  }
+
+  async #onMention(message: ChatMessage) {
+    if (this.#isChannelOnScreen(message.channel)) return;
+
+    const notifications = await this.getContext(UMB_NOTIFICATION_CONTEXT);
+    notifications?.peek("default", {
+      data: {
+        headline: this.#localize.term("backchat_mentionedYou", message.userName),
+        message: toPlainText(message.message, this.#mentionables.getValue()),
+      },
+    });
   }
 
   #observeIsAuthorized() {
@@ -144,6 +189,8 @@ export class BackChatContext extends UmbContextBase {
       this.#messages.appendOne(message);
     });
 
+    connection.on("mention", (message: ChatMessage) => this.#onMention(message));
+
     // The full set on connect, then one channel at a time as they change
     connection.on("unread", (counts: UnreadCount[]) => {
       this.#unread.setValue(counts.filter((c) => c.unread > 0));
@@ -162,6 +209,7 @@ export class BackChatContext extends UmbContextBase {
     connection.onreconnected(() => {
       this.#setConnected(connection, true);
       this.#joinAll(connection);
+      this.#loadMentionables(connection);
     });
     connection.onclose(() => this.#setConnected(connection, false));
 
@@ -170,6 +218,7 @@ export class BackChatContext extends UmbContextBase {
       .then(() => {
         this.#setConnected(connection, true);
         this.#joinAll(connection);
+        this.#loadMentionables(connection);
       })
       .catch((error) => {
         this.#setConnected(connection, false);

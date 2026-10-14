@@ -14,6 +14,8 @@ public class BackChatHub(
     ChannelAccessService channelAccess,
     IChatMessageStore messageStore,
     IReadStateStore readStateStore,
+    IMentionStore mentionStore,
+    MentionService mentionService,
     BackChatConnections connections,
     BackChatNotifier notifier) : Hub
 {
@@ -55,7 +57,8 @@ public class BackChatHub(
         await Clients.Caller.SendAsync("history", channel, messageStore.GetHistory(channel));
     }
 
-    public async Task SendMessage(string channel, string message)
+    /// <returns>Anything the sender should know, such as people they mentioned who can't see the chat.</returns>
+    public async Task<SendMessageResult> SendMessage(string channel, string message)
     {
         if (string.IsNullOrWhiteSpace(message) || message.Length > MaxMessageLength)
         {
@@ -73,7 +76,10 @@ public class BackChatHub(
             UserKey = user.Key,
         };
 
+        MentionResult mentions = await mentionService.ResolveAsync(chatMessage.Message, user, channel);
+
         messageStore.Add(chatMessage);
+        mentionStore.Add(chatMessage, mentions.Recipients);
 
         // Replying means you've read the channel
         readStateStore.MarkRead(user.Key, channel, chatMessage.Date);
@@ -82,6 +88,18 @@ public class BackChatHub(
 
         await notifier.SendUnreadCountAsync(user.Key, channel);
         await notifier.ChannelChangedAsync(channel, user.Key);
+        await notifier.SendMentionAsync(mentions.Recipients, chatMessage);
+
+        return new SendMessageResult(mentions.Unreachable);
+    }
+
+    /// <summary>
+    /// The users and groups that can be mentioned, for the picker and for showing names in messages.
+    /// </summary>
+    public async Task<Mentionables> GetMentionables()
+    {
+        await GetCurrentUserAsync();
+        return await mentionService.GetMentionablesAsync();
     }
 
     /// <summary>
@@ -97,6 +115,8 @@ public class BackChatHub(
 
         await notifier.SendUnreadCountAsync(user.Key, channel);
     }
+
+    public record SendMessageResult(IReadOnlyList<string> Unreachable);
 
     internal static string GroupName(string channel) => $"backchat:{channel}";
 
