@@ -15,6 +15,12 @@ public class DatabaseChatMessageStore(IScopeProvider scopeProvider) : IChatMessa
         scope.Database.Insert(ChatMessageDto.From(message));
     }
 
+    public void Update(ChatMessage message)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+        scope.Database.Update(ChatMessageDto.From(message));
+    }
+
     public IReadOnlyList<ChatMessage> Get(IEnumerable<Guid> keys)
     {
         var list = keys.ToList();
@@ -57,7 +63,9 @@ public class DatabaseChatMessageStore(IScopeProvider scopeProvider) : IChatMessa
         var sql = scope.SqlContext.Sql()
             .SelectCount()
             .From<ChatMessageDto>()
-            .Where<ChatMessageDto>(x => x.Channel == channel && (x.UserKey == null || x.UserKey != userKey));
+            .Where<ChatMessageDto>(x => x.Channel == channel
+                && x.Type != ChatMessage.ActivityType
+                && (x.UserKey == null || x.UserKey != userKey));
 
         if (since is not null)
         {

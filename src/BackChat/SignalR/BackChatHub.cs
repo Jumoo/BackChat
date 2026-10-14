@@ -267,7 +267,7 @@ public class BackChatHub(
 
     public record SendMessageResult(IReadOnlyList<string> Unreachable);
 
-    internal static string GroupName(string channel) => $"backchat:{channel}";
+    public static string GroupName(string channel) => $"backchat:{channel}";
 
     // The user comes from the connection's claims, as Umbraco's own hubs do. The
     // HttpContext-based accessors aren't reliable inside hub method calls.

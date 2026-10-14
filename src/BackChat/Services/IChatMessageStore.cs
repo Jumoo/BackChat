@@ -5,6 +5,11 @@ public interface IChatMessageStore
     void Add(ChatMessage message);
 
     /// <summary>
+    /// Saves changes to a message's date and payload, for activity lines that collapse.
+    /// </summary>
+    void Update(ChatMessage message);
+
+    /// <summary>
     /// The messages with the given keys, oldest first.
     /// </summary>
     IReadOnlyList<ChatMessage> Get(IEnumerable<Guid> keys);
@@ -16,7 +21,7 @@ public interface IChatMessageStore
 
     /// <summary>
     /// Counts the messages in a channel newer than <paramref name="since"/> that someone
-    /// other than <paramref name="userKey"/> sent.
+    /// other than <paramref name="userKey"/> sent. Activity lines don't count.
     /// </summary>
     int CountSince(string channel, DateTime? since, Guid userKey);
 

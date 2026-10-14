@@ -9,6 +9,10 @@ export interface ChatMessage {
   requiresConfirmation?: boolean;
   // Opens over the backoffice until confirmed
   important?: boolean;
+  // "activity" for a line about something that happened to the document
+  type?: "message" | "activity";
+  // JSON details for an activity line
+  payload?: string;
 }
 
 // Unread messages in one channel. Mentions of the current user are counted separately.

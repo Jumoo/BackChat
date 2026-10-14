@@ -44,6 +44,16 @@ public class ChatMessageDto
     [Constraint(Default = "0")]
     public bool Important { get; set; }
 
+    [Column("type")]
+    [Length(20)]
+    [Constraint(Default = ChatMessage.MessageType)]
+    public string Type { get; set; } = ChatMessage.MessageType;
+
+    [Column("payload")]
+    [Length(1000)]
+    [NullSetting]
+    public string? Payload { get; set; }
+
     public static ChatMessageDto From(ChatMessage message) => new()
     {
         Id = message.Key,
@@ -54,6 +64,8 @@ public class ChatMessageDto
         Date = message.Date,
         RequiresConfirmation = message.RequiresConfirmation,
         Important = message.Important,
+        Type = message.Type,
+        Payload = message.Payload,
     };
 
     public ChatMessage ToChatMessage() => new()
@@ -66,5 +78,7 @@ public class ChatMessageDto
         Date = DateTime.SpecifyKind(Date, DateTimeKind.Utc),
         RequiresConfirmation = RequiresConfirmation,
         Important = Important,
+        Type = Type,
+        Payload = Payload,
     };
 }
