@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateReviewRuleData, CreateReviewRuleErrors, CreateReviewRuleResponses, CreateTaskData, CreateTaskErrors, CreateTaskResponses, DeleteReviewRuleData, DeleteReviewRuleErrors, DeleteReviewRuleResponses, DeleteTaskData, DeleteTaskErrors, DeleteTaskResponses, GetDueReviewsData, GetDueReviewsErrors, GetDueReviewsResponses, GetOpenTasksData, GetOpenTasksErrors, GetOpenTasksResponses, GetReviewData, GetReviewErrors, GetReviewResponses, GetReviewRulesData, GetReviewRulesErrors, GetReviewRulesResponses, GetTasksData, GetTasksErrors, GetTasksResponses, MarkReviewedData, MarkReviewedErrors, MarkReviewedResponses, SetReviewDateData, SetReviewDateErrors, SetReviewDateResponses, SortTasksData, SortTasksErrors, SortTasksResponses, UpdateReviewRuleData, UpdateReviewRuleErrors, UpdateReviewRuleResponses, UpdateTaskData, UpdateTaskErrors, UpdateTaskResponses } from './types.gen';
+import type { CreateReviewRuleData, CreateReviewRuleErrors, CreateReviewRuleResponses, CreateTaskData, CreateTaskErrors, CreateTaskResponses, DeleteReviewRuleData, DeleteReviewRuleErrors, DeleteReviewRuleResponses, DeleteTaskData, DeleteTaskErrors, DeleteTaskResponses, GetDueReviewsData, GetDueReviewsErrors, GetDueReviewsResponses, GetOpenTasksData, GetOpenTasksErrors, GetOpenTasksResponses, GetReviewData, GetReviewErrors, GetReviewResponses, GetReviewRulesData, GetReviewRulesErrors, GetReviewRulesResponses, GetTasksData, GetTasksErrors, GetTasksResponses, GetUnreadMentionsData, GetUnreadMentionsErrors, GetUnreadMentionsResponses, MarkReviewedData, MarkReviewedErrors, MarkReviewedResponses, SetReviewDateData, SetReviewDateErrors, SetReviewDateResponses, SortTasksData, SortTasksErrors, SortTasksResponses, UpdateReviewRuleData, UpdateReviewRuleErrors, UpdateReviewRuleResponses, UpdateTaskData, UpdateTaskErrors, UpdateTaskResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,16 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export class Mentions {
+    public static getUnreadMentions<ThrowOnError extends boolean = true>(options?: Options<GetUnreadMentionsData, ThrowOnError>): RequestResult<GetUnreadMentionsResponses, GetUnreadMentionsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetUnreadMentionsResponses, GetUnreadMentionsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/mentions/unread',
+            ...options
+        });
+    }
+}
 
 export class Reviews {
     public static getReview<ThrowOnError extends boolean = true>(options: Options<GetReviewData, ThrowOnError>): RequestResult<GetReviewResponses, GetReviewErrors, ThrowOnError> {

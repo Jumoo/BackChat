@@ -53,6 +53,21 @@ public class DatabaseMentionStore(IScopeProvider scopeProvider) : IMentionStore
         return scope.Database.Fetch<string>(sql);
     }
 
+    public IReadOnlyList<(Guid MessageKey, string Channel, DateTime Date)> GetForUser(Guid userKey)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .Select<MentionDto>()
+            .From<MentionDto>()
+            .Where<MentionDto>(x => x.UserKey == userKey)
+            .OrderByDescending<MentionDto>(x => x.Date);
+
+        return scope.Database.Fetch<MentionDto>(sql)
+            .Select(x => (x.MessageKey, x.Channel, DateTime.SpecifyKind(x.Date, DateTimeKind.Utc)))
+            .ToList();
+    }
+
     public IReadOnlyList<Guid> GetMentionedUsers(string channel)
     {
         using IScope scope = scopeProvider.CreateScope(autoComplete: true);

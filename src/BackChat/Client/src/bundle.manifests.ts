@@ -6,6 +6,7 @@ import { manifests as localization } from "./localization/manifest";
 import { manifests as permissions } from "./permissions/manifest";
 import { manifests as confirmations } from "./confirmations/manifest";
 import { manifests as reviews } from "./reviews/manifest";
+import { manifests as dashboard } from "./dashboard/manifest";
 
 // The bundle collates every manifest. Umbraco loads it through the bundle entry
 // registered by BackChatPackageManifestReader.
@@ -18,4 +19,5 @@ export const manifests: Array<UmbExtensionManifest> = [
   ...permissions,
   ...confirmations,
   ...reviews,
+  ...dashboard,
 ];

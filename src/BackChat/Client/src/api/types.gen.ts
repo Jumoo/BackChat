@@ -4,6 +4,13 @@ export type ClientOptions = {
     baseUrl: 'https://localhost:54689' | (string & {});
 };
 
+export enum ChannelKind {
+    GLOBAL = 'Global',
+    DOCUMENT = 'Document',
+    DIRECT = 'Direct',
+    GROUP = 'Group'
+}
+
 export type CreateTaskRequestModel = {
     title: string;
     assigneeKey?: string | null;
@@ -28,6 +35,11 @@ export type PagedDueReviewModel = {
 export type PagedTaskResponseModel = {
     total: number;
     items: Array<TaskResponseModel>;
+};
+
+export type PagedUnreadMentionModel = {
+    total: number;
+    items: Array<UnreadMention>;
 };
 
 export type ReviewHistoryEntry = {
@@ -82,12 +94,50 @@ export type TaskResponseModel = {
     isComplete: boolean;
 };
 
+export type UnreadMention = {
+    messageKey: string;
+    channel: string;
+    kind: ChannelKind;
+    title?: string | null;
+    userName: string;
+    message: string;
+    payload?: string | null;
+    type: string;
+    date: string;
+};
+
 export type UpdateTaskRequestModel = {
     title: string;
     assigneeKey?: string | null;
     dueDate?: string | null;
     isComplete: boolean;
 };
+
+export type GetUnreadMentionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        skip?: number;
+        take?: number;
+    };
+    url: '/umbraco/management/api/v1/backchat/mentions/unread';
+};
+
+export type GetUnreadMentionsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+};
+
+export type GetUnreadMentionsResponses = {
+    /**
+     * OK
+     */
+    200: PagedUnreadMentionModel;
+};
+
+export type GetUnreadMentionsResponse = GetUnreadMentionsResponses[keyof GetUnreadMentionsResponses];
 
 export type GetReviewData = {
     body?: never;
