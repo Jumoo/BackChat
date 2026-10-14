@@ -15,8 +15,10 @@ public class ChatMessageDto
     [PrimaryKeyColumn(AutoIncrement = false)]
     public Guid Id { get; set; }
 
+    // History is read by channel, newest first
     [Column("channel")]
     [Length(200)]
+    [Index(IndexTypes.NonClustered, Name = "IX_" + TableName + "_channel_date", ForColumns = "channel,date")]
     public string Channel { get; set; } = string.Empty;
 
     [Column("message")]

@@ -1,34 +1,31 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Options;
+using Umbraco.Cms.Api.Management.Routing;
 using Umbraco.Cms.Core;
-using Umbraco.Cms.Core.Hosting;
+using Umbraco.Cms.Core.Configuration.Models;
 using Umbraco.Cms.Core.Services;
-using Umbraco.Cms.Web.Common.Routing;
-using Umbraco.Extensions;
 
 namespace BackChat.SignalR;
 
-internal class BackChatHubRoutes : IAreaRoutes
+// Maps the hub next to Umbraco's own backoffice hubs. SignalRRoutesBase applies
+// Umbraco's SignalR settings, so ClientShouldSkipNegotiation covers our hub too.
+internal class BackChatHubRoutes : SignalRRoutesBase
 {
-    private readonly IRuntimeState _runtimeState;
-    private readonly string _backOfficePath;
+    public const string HubPath = "/backchathub";
 
-    public BackChatHubRoutes(IHostingEnvironment hostingEnvironment, IRuntimeState runtimeState)
+    public BackChatHubRoutes(IRuntimeState runtimeState, IOptions<SignalRSettings> signalRSettings)
+        : base(runtimeState, signalRSettings)
     {
-        _runtimeState = runtimeState;
-        _backOfficePath = hostingEnvironment.GetBackOfficePath().TrimEnd('/');
     }
 
     public void CreateRoutes(IEndpointRouteBuilder endpoints)
-        => _ = CreateEndpointRoutes(endpoints);
-
-    public IEndpointConventionBuilder? CreateEndpointRoutes(IEndpointRouteBuilder endpoints)
     {
-        if (_runtimeState.Level >= RuntimeLevel.Install)
+        if (RuntimeState.Level is RuntimeLevel.Install or RuntimeLevel.Upgrade or RuntimeLevel.Upgrading or RuntimeLevel.Run)
         {
-            return endpoints.MapHub<BackChatHub>($"{_backOfficePath}/chathub");
+            endpoints.MapHub<BackChatHub>(
+                Umbraco.Cms.Core.Constants.System.UmbracoPathSegment + HubPath,
+                ConfigureHubEndpoint);
         }
-
-        return null;
     }
 }

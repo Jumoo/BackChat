@@ -14,7 +14,7 @@ internal class HubBackChatFilter : UmbracoPipelineFilter
             {
                 app.ApplicationServices
                     .GetRequiredService<BackChatHubRoutes>()
-                    .CreateEndpointRoutes(endpoints);
+                    .CreateRoutes(endpoints);
             });
         };
     }

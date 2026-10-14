@@ -15,7 +15,7 @@ public class BackChatPackageManifestReader : IPackageManifestReader
             Id = Constants.PackageName,
             Name = "BackChat",
             Version = typeof(BackChatPackageManifestReader).Assembly.GetName().Version?.ToString(),
-            AllowTelemetry = false,
+            AllowTelemetry = true,
             Extensions =
             [
                 new
