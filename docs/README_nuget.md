@@ -10,8 +10,9 @@ Install into an Umbraco 17 site:
 dotnet add package Umbraco.Community.BackChat
 ```
 
-Back Chat adds a chat button to the backoffice header, and a Chat tab to each document.
+Back Chat adds a chat button to the backoffice header, and a Chat tab to each document. Messages are stored in the site's database, in a `BackChatMessages` table created on first start.
 
 ## Notes
 
-Messages are kept in memory for now, so they are lost when the site restarts and are not shared between load-balanced nodes.
+- A document's chat is only visible to users who can browse that document.
+- On a load-balanced backoffice, history is shared through the database, but live messages only reach users connected to the same server unless SignalR has a backplane configured.

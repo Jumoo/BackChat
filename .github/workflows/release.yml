@@ -23,8 +23,7 @@ concurrency:
 env:
   config: Release
   out_folder: ./build-out/
-  # TODO: point these at this repo's package project. The package project is the
-  # whole of what ships - not the solution, and not a *.Site test project.
+  # The package project is the whole of what ships - not the solution, and not a *.Site test project.
   package_project: ./src/BackChat/BackChat.csproj
   client_folder: ./src/BackChat/Client
   nuget_source: https://api.nuget.org/v3/index.json

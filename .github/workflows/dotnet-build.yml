@@ -19,8 +19,7 @@ concurrency:
 
 env:
   config: Release
-  # TODO: point these at this repo's package project. The package project is the
-  # whole of what ships - not the solution, and not a *.Site test project.
+  # The package project is the whole of what ships - not the solution, and not a *.Site test project.
   package_project: ./src/BackChat/BackChat.csproj
   client_folder: ./src/BackChat/Client
 
@@ -45,11 +44,6 @@ jobs:
 
       - name: install client dependencies
         run: npm ci
-        working-directory: ${{ env.client_folder }}
-
-      # TODO: drop if the client's package.json has no "format" script.
-      - name: check client formatting
-        run: npm run format
         working-directory: ${{ env.client_folder }}
 
       # runs tsc then vite - this is what produces wwwroot, which is gitignored, so it

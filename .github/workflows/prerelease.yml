@@ -18,11 +18,10 @@ concurrency:
 env:
   config: Release
   out_folder: ./build-out/
-  # TODO: point these at this repo's package project. The package project is the
-  # whole of what ships - not the solution, and not a *.Site test project.
+  # The package project is the whole of what ships - not the solution, and not a *.Site test project.
   package_project: ./src/BackChat/BackChat.csproj
   client_folder: ./src/BackChat/Client
-  # TODO: the version prereleases build towards until the first release is tagged on this
+  # The version prereleases build towards until the first release is tagged on this
   # branch - usually {umbraco major}.0.0.
   first_version: 17.0.0
 

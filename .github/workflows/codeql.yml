@@ -47,8 +47,7 @@ jobs:
             build-mode: none
           - language: csharp
             build-mode: none
-          # TODO: drop this entry if the package has no TypeScript backoffice client -
-          # otherwise it's where most of the package's user facing behaviour lives.
+          # The backoffice client is where most of the package's user facing behaviour lives.
           - language: javascript-typescript
             build-mode: none
 
