@@ -7,9 +7,13 @@ const enUs: UmbLocalizationDictionary = {
     chat: "Chat",
     message: "Message",
     messagePlaceholder: "Your message",
+    connecting: "Connecting to chat…",
     send: "Send",
     close: "Close",
+    empty: "No messages yet. Start the conversation.",
     saveToStart: "Save this document to start a chat about it.",
+    sendFailedHeadline: "Message not sent",
+    sendFailedMessage: "The chat server didn't accept the message. Your text is still in the box, so try again in a moment.",
   },
 };
 

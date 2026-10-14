@@ -7,22 +7,30 @@ import "../components/chat-messages.element";
 @customElement("backchat-workspace-view")
 export class BackChatWorkspaceViewElement extends UmbLitElement {
   @state()
-  private _unique?: string;
+  private _unique?: string | null;
+
+  @state()
+  private _isNew?: boolean;
 
   constructor() {
     super();
 
     this.consumeContext(UMB_DOCUMENT_WORKSPACE_CONTEXT, (context) => {
-      this._unique = context?.getUnique() ?? undefined;
+      if (!context) return;
+      this.observe(context.unique, (unique) => (this._unique = unique), "_unique");
+      this.observe(context.isNew, (isNew) => (this._isNew = isNew), "_isNew");
     });
   }
 
   override render() {
+    // A new document has a key before it is saved, but the server has nothing to check access against yet
+    const canChat = !!this._unique && this._isNew === false;
+
     return html`
       <umb-body-layout>
         <uui-box headline=${this.localize.term("backchat_chat")} class="chat-box">
-          ${this._unique
-            ? html`<backchat-chat-messages .channel=${this._unique}></backchat-chat-messages>`
+          ${canChat
+            ? html`<backchat-chat-messages .channel=${this._unique!}></backchat-chat-messages>`
             : html`<p>${this.localize.term("backchat_saveToStart")}</p>`}
         </uui-box>
       </umb-body-layout>
@@ -33,7 +41,11 @@ export class BackChatWorkspaceViewElement extends UmbLitElement {
     .chat-box {
       height: 100%;
     }
+
+    backchat-chat-messages {
+      height: 60vh;
+    }
   `;
 }
 
-export default BackChatWorkspaceViewElement;
+export { BackChatWorkspaceViewElement as element };

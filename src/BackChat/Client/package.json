@@ -7,9 +7,6 @@
     "watch": "tsc && vite build --watch",
     "build": "tsc && vite build"
   },
-  "dependencies": {
-    "@microsoft/signalr": "10.0.11"
-  },
   "devDependencies": {
     "@umbraco-cms/backoffice": "17.7.1",
     "typescript": "5.9.3",

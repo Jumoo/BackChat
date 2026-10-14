@@ -1,6 +1,7 @@
-import { css, customElement, html, property, repeat, state } from "@umbraco-cms/backoffice/external/lit";
+import { css, customElement, html, property, query, repeat, state } from "@umbraco-cms/backoffice/external/lit";
+import type { PropertyValues } from "@umbraco-cms/backoffice/external/lit";
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
-import { UMB_CURRENT_USER_CONTEXT, type UmbCurrentUserModel } from "@umbraco-cms/backoffice/current-user";
+import { UMB_CURRENT_USER_CONTEXT } from "@umbraco-cms/backoffice/current-user";
 import { BACKCHAT_CONTEXT } from "../global/backchat.context.token";
 import type { BackChatContext } from "../global/backchat.context";
 import type { ChatMessage } from "../signalR/types";
@@ -17,51 +18,65 @@ export class BackChatChatMessagesElement extends UmbLitElement {
   private _messages: ChatMessage[] = [];
 
   @state()
-  private _currentUser?: UmbCurrentUserModel;
+  private _currentUserKey?: string;
+
+  @query(".messages")
+  private _messagesElement?: HTMLElement;
 
   #context?: BackChatContext;
-  #subscribedChannel?: string;
 
   constructor() {
     super();
 
     this.consumeContext(BACKCHAT_CONTEXT, (context) => {
       this.#context = context;
-      this.#subscribe();
+      this.#observeChannel();
     });
 
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (context) => {
       if (!context) return;
-      this.observe(context.currentUser, (user) => (this._currentUser = user));
+      this.observe(context.unique, (unique) => (this._currentUserKey = unique), "_currentUserKey");
     });
   }
 
-  override willUpdate(changed: Map<string, unknown>) {
-    if (changed.has("channel")) this.#subscribe();
+  override willUpdate(changed: PropertyValues) {
+    if (changed.has("channel")) this.#observeChannel();
   }
 
-  #subscribe() {
-    if (!this.#context || !this.channel || this.#subscribedChannel === this.channel) return;
+  override updated(changed: PropertyValues) {
+    // Keep the newest message in view
+    if (changed.has("_messages") && this._messagesElement) {
+      this._messagesElement.scrollTop = this._messagesElement.scrollHeight;
+    }
+  }
 
-    this.#subscribedChannel = this.channel;
+  #observeChannel() {
+    if (!this.#context || !this.channel) return;
+
     this.#context.joinChannel(this.channel);
-    this.observe(this.#context.messagesOf(this.channel), (messages) => {
-      this._messages = messages;
-    });
+
+    // The alias replaces the previous subscription when the channel changes
+    this.observe(
+      this.#context.messagesOf(this.channel),
+      (messages) => (this._messages = messages),
+      "_messages"
+    );
   }
 
   override render() {
     return html`
       <div class="layout">
         <div class="messages">
-          ${repeat(
-            this._messages,
-            (m) => m.key,
-            (m) => html`<backchat-chat-bubble
-              .message=${m}
-              .isCurrentUser=${this._currentUser?.name === m.userName}
-            ></backchat-chat-bubble>`
-          )}
+          ${this._messages.length === 0
+            ? html`<p class="empty">${this.localize.term("backchat_empty")}</p>`
+            : repeat(
+                this._messages,
+                (m) => m.key,
+                (m) => html`<backchat-chat-bubble
+                  .message=${m}
+                  .isCurrentUser=${!!m.userKey && m.userKey === this._currentUserKey}
+                ></backchat-chat-bubble>`
+              )}
         </div>
         <backchat-chat-input-box .channel=${this.channel}></backchat-chat-input-box>
       </div>
@@ -82,11 +97,17 @@ export class BackChatChatMessagesElement extends UmbLitElement {
     }
 
     .messages {
-      flex-grow: 1;
+      flex: 1 1 0;
+      min-height: 0;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: var(--uui-size-space-3);
+    }
+
+    .empty {
+      color: var(--uui-color-text-alt);
+      margin: auto;
     }
   `;
 }
