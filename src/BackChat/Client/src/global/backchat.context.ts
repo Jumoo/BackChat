@@ -361,6 +361,14 @@ export class BackChatContext extends UmbContextBase {
       );
     });
 
+    connection.on("reviewDue", (review: { documentKey: string; documentName: string }) => {
+      this.getContext(UMB_NOTIFICATION_CONTEXT).then((notifications) =>
+        notifications?.peek("warning", {
+          data: { headline: this.#localize.term("backchat_reviewDueHeadline"), message: review.documentName },
+        })
+      );
+    });
+
     connection.on("pendingConfirmations", (messages: ChatMessage[]) => this.#pending.setValue(messages));
     connection.on("confirmationRequested", (message: ChatMessage) => this.#onConfirmationRequested(message));
     // Confirmed in another tab: close it here too

@@ -7,6 +7,7 @@ import {
   BACKCHAT_PERMISSION_PIN_NOTES,
   BACKCHAT_PERMISSION_VIEW_ALL,
 } from "./constants";
+import { BACKCHAT_PERMISSION_CONDITION_ALIAS } from "./permission.condition";
 
 const permission = (verb: string, key: string, weight: number): UmbExtensionManifest => ({
   type: "entityUserPermission",
@@ -21,8 +22,16 @@ const permission = (verb: string, key: string, weight: number): UmbExtensionMani
   },
 });
 
+const permissionCondition: UmbExtensionManifest = {
+  type: "condition",
+  alias: BACKCHAT_PERMISSION_CONDITION_ALIAS,
+  name: "BackChat Permission Condition",
+  api: () => import("./permission.condition"),
+};
+
 // Shown in the user group editor next to Umbraco's own permissions
 export const manifests: Array<UmbExtensionManifest> = [
+  permissionCondition,
   permission(BACKCHAT_PERMISSION_ANNOUNCE, "Announce", 600),
   permission(BACKCHAT_PERMISSION_MESSAGE_GROUPS, "MessageGroups", 500),
   permission(BACKCHAT_PERMISSION_MENTION_GROUPS, "MentionGroups", 400),

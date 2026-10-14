@@ -10,9 +10,57 @@ export type CreateTaskRequestModel = {
     dueDate?: string | null;
 };
 
+export type DueReview = {
+    documentKey: string;
+    documentName?: string | null;
+    nextReview: string;
+};
+
+export type MarkReviewedRequestModel = {
+    note?: string | null;
+};
+
+export type PagedDueReviewModel = {
+    total: number;
+    items: Array<DueReview>;
+};
+
 export type PagedTaskResponseModel = {
     total: number;
     items: Array<TaskResponseModel>;
+};
+
+export type ReviewHistoryEntry = {
+    reviewedBy: string;
+    reviewedByName: string;
+    date: string;
+    note?: string | null;
+};
+
+export type ReviewRule = {
+    id: string;
+    contentTypeKey: string;
+    contentTypeName?: string | null;
+    intervalMonths: number;
+    fromPublish: boolean;
+};
+
+export type ReviewState = {
+    documentKey: string;
+    nextReview?: string | null;
+    setManually: boolean;
+    rule?: ReviewRule | null;
+    history: Array<ReviewHistoryEntry>;
+};
+
+export type SaveReviewRuleRequestModel = {
+    contentTypeKey: string;
+    intervalMonths: number;
+    fromPublish: boolean;
+};
+
+export type SetReviewDateRequestModel = {
+    date?: string | null;
 };
 
 export type SortTasksRequestModel = {
@@ -40,6 +88,254 @@ export type UpdateTaskRequestModel = {
     dueDate?: string | null;
     isComplete: boolean;
 };
+
+export type GetReviewData = {
+    body?: never;
+    path: {
+        documentKey: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review';
+};
+
+export type GetReviewErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type GetReviewResponses = {
+    /**
+     * OK
+     */
+    200: ReviewState;
+};
+
+export type GetReviewResponse = GetReviewResponses[keyof GetReviewResponses];
+
+export type SetReviewDateData = {
+    body?: SetReviewDateRequestModel;
+    path: {
+        documentKey: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review/date';
+};
+
+export type SetReviewDateErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type SetReviewDateResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type MarkReviewedData = {
+    body?: MarkReviewedRequestModel;
+    path: {
+        documentKey: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review/reviewed';
+};
+
+export type MarkReviewedErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type MarkReviewedResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type GetReviewRulesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/review-rules';
+};
+
+export type GetReviewRulesErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+};
+
+export type GetReviewRulesResponses = {
+    /**
+     * OK
+     */
+    200: Array<ReviewRule>;
+};
+
+export type GetReviewRulesResponse = GetReviewRulesResponses[keyof GetReviewRulesResponses];
+
+export type CreateReviewRuleData = {
+    body?: SaveReviewRuleRequestModel;
+    path?: never;
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/review-rules';
+};
+
+export type CreateReviewRuleErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+};
+
+export type CreateReviewRuleResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type DeleteReviewRuleData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/review-rules/{id}';
+};
+
+export type DeleteReviewRuleErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type DeleteReviewRuleResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type UpdateReviewRuleData = {
+    body?: SaveReviewRuleRequestModel;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/umbraco/management/api/v1/backchat/review-rules/{id}';
+};
+
+export type UpdateReviewRuleErrors = {
+    /**
+     * Bad Request
+     */
+    400: unknown;
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+    /**
+     * Not Found
+     */
+    404: unknown;
+};
+
+export type UpdateReviewRuleResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type GetDueReviewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        everyone?: boolean;
+        skip?: number;
+        take?: number;
+    };
+    url: '/umbraco/management/api/v1/backchat/reviews/due';
+};
+
+export type GetDueReviewsErrors = {
+    /**
+     * The resource is protected and requires an authentication token
+     */
+    401: unknown;
+    /**
+     * Forbidden
+     */
+    403: unknown;
+};
+
+export type GetDueReviewsResponses = {
+    /**
+     * OK
+     */
+    200: PagedDueReviewModel;
+};
+
+export type GetDueReviewsResponse = GetDueReviewsResponses[keyof GetDueReviewsResponses];
 
 export type GetTasksData = {
     body?: never;
