@@ -78,7 +78,7 @@ export class BackChatChatMessagesElement extends UmbLitElement {
                 ></backchat-chat-bubble>`
               )}
         </div>
-        <backchat-chat-input-box .channel=${this.channel}></backchat-chat-input-box>
+        <backchat-chat-input-box class="composer" .channel=${this.channel}></backchat-chat-input-box>
       </div>
     `;
   }
@@ -102,7 +102,12 @@ export class BackChatChatMessagesElement extends UmbLitElement {
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: var(--uui-size-space-3);
+      gap: var(--uui-size-space-4);
+    }
+
+    .composer {
+      border-top: 1px solid var(--uui-color-divider-standalone);
+      padding-top: var(--uui-size-space-3);
     }
 
     .empty {

@@ -8,53 +8,59 @@ export class BackChatChatBubbleElement extends UmbLitElement {
   @property({ type: Object })
   message?: ChatMessage;
 
-  @property({ type: Boolean })
+  // Reflected so the host can line itself up on the sender's side
+  @property({ type: Boolean, reflect: true, attribute: "current-user" })
   isCurrentUser = false;
 
   override render() {
     if (!this.message) return nothing;
 
     return html`
-      <div class="bubble ${this.isCurrentUser ? "current-user" : ""}">
-        <div class="body">${this.message.message}</div>
-        <div class="meta">
-          ${this.message.userName}
-          (${this.localize.date(this.message.date, BackChatTimeOptions)})
-        </div>
+      <div class="body">${this.message.message}</div>
+      <div class="meta">
+        <span class="name">${this.message.userName}</span>
+        <span>${this.localize.date(this.message.date, BackChatTimeOptions)}</span>
       </div>
     `;
   }
 
   static override styles = css`
-    .bubble {
-      padding-right: 25%;
+    :host {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
     }
 
-    .bubble.current-user {
-      padding-left: 25%;
-      padding-right: 0;
+    :host([current-user]) {
+      align-items: flex-end;
     }
 
     .body {
+      max-width: 80%;
+      padding: var(--uui-size-space-3) var(--uui-size-space-4);
       background-color: var(--uui-color-surface-alt);
-      padding: var(--uui-size-space-3);
       border: 1px solid var(--uui-color-border);
-      border-radius: var(--uui-border-radius);
+      border-radius: calc(var(--uui-border-radius) * 3);
       white-space: pre-wrap;
-      word-break: break-word;
+      overflow-wrap: anywhere;
     }
 
-    .current-user .body {
+    :host([current-user]) .body {
       background-color: var(--uui-color-selected);
+      border-color: var(--uui-color-selected);
       color: var(--uui-color-selected-contrast);
     }
 
     .meta {
-      font-size: small;
-      font-style: italic;
-      color: var(--uui-color-text-alt);
-      text-align: right;
+      display: flex;
+      gap: var(--uui-size-space-2);
       margin-top: var(--uui-size-space-1);
+      color: var(--uui-color-text-alt);
+      font-size: var(--uui-type-small-size);
+    }
+
+    .name {
+      font-weight: 700;
     }
   `;
 }

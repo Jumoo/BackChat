@@ -63,18 +63,20 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
 
   override render() {
     return html`
-      <div class="input">
-        <uui-textarea
-          label=${this.localize.term("backchat_message")}
-          placeholder=${this.localize.term(
-            this._isConnected ? "backchat_messagePlaceholder" : "backchat_connecting"
-          )}
-          rows="2"
-          maxlength=${BACKCHAT_MAX_MESSAGE_LENGTH}
-          .value=${this._text}
-          @input=${(e: Event) => (this._text = (e.target as HTMLTextAreaElement).value)}
-          @keydown=${this.#onKeyDown}
-        ></uui-textarea>
+      <uui-textarea
+        label=${this.localize.term("backchat_message")}
+        placeholder=${this.localize.term(
+          this._isConnected ? "backchat_messagePlaceholder" : "backchat_connecting"
+        )}
+        rows="2"
+        auto-height
+        maxlength=${BACKCHAT_MAX_MESSAGE_LENGTH}
+        .value=${this._text}
+        @input=${(e: Event) => (this._text = (e.target as HTMLTextAreaElement).value)}
+        @keydown=${this.#onKeyDown}
+      ></uui-textarea>
+      <div class="actions">
+        <span class="hint">${this.localize.term("backchat_sendHint")}</span>
         <uui-button
           look="primary"
           color="positive"
@@ -88,14 +90,28 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
   }
 
   static override styles = css`
-    .input {
+    :host {
       display: flex;
-      align-items: flex-start;
+      flex-direction: column;
       gap: var(--uui-size-space-2);
     }
 
     uui-textarea {
-      flex-grow: 1;
+      display: block;
+      width: 100%;
+      --uui-textarea-max-height: 12em;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--uui-size-space-3);
+    }
+
+    .hint {
+      color: var(--uui-color-text-alt);
+      font-size: var(--uui-type-small-size);
     }
   `;
 }

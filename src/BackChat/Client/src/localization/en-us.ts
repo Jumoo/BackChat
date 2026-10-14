@@ -9,6 +9,7 @@ const enUs: UmbLocalizationDictionary = {
     messagePlaceholder: "Your message",
     connecting: "Connecting to chat…",
     send: "Send",
+    sendHint: "Enter to send, Shift+Enter for a new line",
     close: "Close",
     empty: "No messages yet. Start the conversation.",
     saveToStart: "Save this document to start a chat about it.",
