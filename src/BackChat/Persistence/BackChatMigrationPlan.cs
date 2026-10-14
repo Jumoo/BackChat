@@ -18,5 +18,6 @@ public class BackChatMigrationPlan : PackageMigrationPlan
         To<AddConfirmations>("add-confirmations");
         To<AddActivity>("add-activity");
         To<CreateTasksTable>("create-tasks-table");
+        To<CreateReviewTables>("create-review-tables");
     }
 }

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateTaskData, CreateTaskErrors, CreateTaskResponses, DeleteTaskData, DeleteTaskErrors, DeleteTaskResponses, GetOpenTasksData, GetOpenTasksErrors, GetOpenTasksResponses, GetTasksData, GetTasksErrors, GetTasksResponses, SortTasksData, SortTasksErrors, SortTasksResponses, UpdateTaskData, UpdateTaskErrors, UpdateTaskResponses } from './types.gen';
+import type { CreateReviewRuleData, CreateReviewRuleErrors, CreateReviewRuleResponses, CreateTaskData, CreateTaskErrors, CreateTaskResponses, DeleteReviewRuleData, DeleteReviewRuleErrors, DeleteReviewRuleResponses, DeleteTaskData, DeleteTaskErrors, DeleteTaskResponses, GetDueReviewsData, GetDueReviewsErrors, GetDueReviewsResponses, GetOpenTasksData, GetOpenTasksErrors, GetOpenTasksResponses, GetReviewData, GetReviewErrors, GetReviewResponses, GetReviewRulesData, GetReviewRulesErrors, GetReviewRulesResponses, GetTasksData, GetTasksErrors, GetTasksResponses, MarkReviewedData, MarkReviewedErrors, MarkReviewedResponses, SetReviewDateData, SetReviewDateErrors, SetReviewDateResponses, SortTasksData, SortTasksErrors, SortTasksResponses, UpdateReviewRuleData, UpdateReviewRuleErrors, UpdateReviewRuleResponses, UpdateTaskData, UpdateTaskErrors, UpdateTaskResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,88 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export class Reviews {
+    public static getReview<ThrowOnError extends boolean = true>(options: Options<GetReviewData, ThrowOnError>): RequestResult<GetReviewResponses, GetReviewErrors, ThrowOnError> {
+        return (options.client ?? client).get<GetReviewResponses, GetReviewErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review',
+            ...options
+        });
+    }
+    
+    public static setReviewDate<ThrowOnError extends boolean = true>(options: Options<SetReviewDateData, ThrowOnError>): RequestResult<SetReviewDateResponses, SetReviewDateErrors, ThrowOnError> {
+        return (options.client ?? client).put<SetReviewDateResponses, SetReviewDateErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review/date',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static markReviewed<ThrowOnError extends boolean = true>(options: Options<MarkReviewedData, ThrowOnError>): RequestResult<MarkReviewedResponses, MarkReviewedErrors, ThrowOnError> {
+        return (options.client ?? client).post<MarkReviewedResponses, MarkReviewedErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/document/{documentKey}/review/reviewed',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static getReviewRules<ThrowOnError extends boolean = true>(options?: Options<GetReviewRulesData, ThrowOnError>): RequestResult<GetReviewRulesResponses, GetReviewRulesErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetReviewRulesResponses, GetReviewRulesErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/review-rules',
+            ...options
+        });
+    }
+    
+    public static createReviewRule<ThrowOnError extends boolean = true>(options?: Options<CreateReviewRuleData, ThrowOnError>): RequestResult<CreateReviewRuleResponses, CreateReviewRuleErrors, ThrowOnError> {
+        return (options?.client ?? client).post<CreateReviewRuleResponses, CreateReviewRuleErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/review-rules',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options?.headers
+            }
+        });
+    }
+    
+    public static deleteReviewRule<ThrowOnError extends boolean = true>(options: Options<DeleteReviewRuleData, ThrowOnError>): RequestResult<DeleteReviewRuleResponses, DeleteReviewRuleErrors, ThrowOnError> {
+        return (options.client ?? client).delete<DeleteReviewRuleResponses, DeleteReviewRuleErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/review-rules/{id}',
+            ...options
+        });
+    }
+    
+    public static updateReviewRule<ThrowOnError extends boolean = true>(options: Options<UpdateReviewRuleData, ThrowOnError>): RequestResult<UpdateReviewRuleResponses, UpdateReviewRuleErrors, ThrowOnError> {
+        return (options.client ?? client).put<UpdateReviewRuleResponses, UpdateReviewRuleErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/review-rules/{id}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    public static getDueReviews<ThrowOnError extends boolean = true>(options?: Options<GetDueReviewsData, ThrowOnError>): RequestResult<GetDueReviewsResponses, GetDueReviewsErrors, ThrowOnError> {
+        return (options?.client ?? client).get<GetDueReviewsResponses, GetDueReviewsErrors, ThrowOnError>({
+            security: [{ scheme: 'bearer', type: 'http' }],
+            url: '/umbraco/management/api/v1/backchat/reviews/due',
+            ...options
+        });
+    }
+}
 
 export class Tasks {
     public static getTasks<ThrowOnError extends boolean = true>(options: Options<GetTasksData, ThrowOnError>): RequestResult<GetTasksResponses, GetTasksErrors, ThrowOnError> {

@@ -16,6 +16,8 @@ public static class ContentActivity
     public const string Restored = "Restored";
     public const string TaskAssigned = "TaskAssigned";
     public const string TaskCompleted = "TaskCompleted";
+    public const string Reviewed = "Reviewed";
+    public const string ReviewDue = "ReviewDue";
 
     /// <summary>
     /// Actions that come with a save of their own ("Save and publish"), so a save line just

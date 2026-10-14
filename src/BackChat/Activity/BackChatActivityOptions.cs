@@ -12,7 +12,7 @@ public class BackChatActivityOptions
 
     /// <summary>
     /// The events to post. Any of: Saved, Published, Unpublished, Moved, Copied, RolledBack,
-    /// Trashed, Restored, TaskAssigned, TaskCompleted.
+    /// Trashed, Restored, TaskAssigned, TaskCompleted, Reviewed, ReviewDue.
     /// </summary>
     public string[] Events { get; set; } =
         [
@@ -26,6 +26,8 @@ public class BackChatActivityOptions
             ContentActivity.Restored,
             ContentActivity.TaskAssigned,
             ContentActivity.TaskCompleted,
+            ContentActivity.Reviewed,
+            ContentActivity.ReviewDue,
         ];
 
     /// <summary>

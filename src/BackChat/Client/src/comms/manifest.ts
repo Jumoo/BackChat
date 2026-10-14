@@ -53,4 +53,16 @@ const tasksCommsApp: ManifestBackChatCommsApp = {
   },
 };
 
-export const manifests = [commsWorkspaceView, unreadHintWorkspaceContext, chatCommsApp, tasksCommsApp];
+// When the document is next due for review
+const reviewCommsApp: ManifestBackChatCommsApp = {
+  type: BACKCHAT_COMMS_APP_TYPE,
+  alias: "BackChat.CommsApp.Review",
+  name: "BackChat Review Comms App",
+  element: () => import("./review/review-comms-app.element"),
+  weight: 50,
+  meta: {
+    area: "aside",
+  },
+};
+
+export const manifests = [commsWorkspaceView, unreadHintWorkspaceContext, chatCommsApp, tasksCommsApp, reviewCommsApp];
