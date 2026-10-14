@@ -12,8 +12,8 @@
     <Product>Umbraco.Community.BackChat</Product>
     <PackageId>Umbraco.Community.BackChat</PackageId>
     <Title>Back Chat</Title>
-    <Description>Chat for the Umbraco backoffice. Talk to other backoffice users in a global channel, or on the document you are editing.</Description>
-    <PackageTags>umbraco;umbraco-marketplace;backoffice;chat</PackageTags>
+    <Description>Talk about and look after content in the Umbraco backoffice: chat, mentions, tasks, review dates and a dashboard of what needs you.</Description>
+    <PackageTags>umbraco;umbraco-marketplace;backoffice;chat;tasks;content-review</PackageTags>
     <Authors>Kevin Jump</Authors>
     <Copyright>$([System.DateTime]::UtcNow.ToString(`yyyy`)) © Kevin Jump</Copyright>
     <PackageProjectUrl>https://github.com/Jumoo/BackChat</PackageProjectUrl>
