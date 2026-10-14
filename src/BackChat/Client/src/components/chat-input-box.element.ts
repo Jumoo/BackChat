@@ -3,10 +3,10 @@ import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { BACKCHAT_CONTEXT } from "../global/backchat.context.token";
 import type { BackChatContext } from "../global/backchat.context";
-import { BACKCHAT_MAX_MESSAGE_LENGTH } from "../constants";
+import { BACKCHAT_MAX_MESSAGE_LENGTH, canAskForConfirmation } from "../constants";
 import type { Mentionables } from "../signalR/types";
 import { groupToken, userToken } from "../mentions/mentions";
-import { BACKCHAT_PERMISSION_MENTION_GROUPS } from "../permissions/constants";
+import { BACKCHAT_PERMISSION_ANNOUNCE, BACKCHAT_PERMISSION_MENTION_GROUPS } from "../permissions/constants";
 
 interface Suggestion {
   name: string;
@@ -37,6 +37,16 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
   private _suggestions: Suggestion[] = [];
 
   @state()
+  private _canAnnounce = false;
+
+  // Ask each recipient to confirm; important also holds their screen until they do
+  @state()
+  private _askConfirm = false;
+
+  @state()
+  private _important = false;
+
+  @state()
   private _active = 0;
 
   #context?: BackChatContext;
@@ -63,6 +73,11 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
         (allowed) => (this.#canMentionGroups = allowed),
         "_canMentionGroups"
       );
+      this.observe(
+        context.hasPermission(BACKCHAT_PERMISSION_ANNOUNCE),
+        (allowed) => (this._canAnnounce = allowed),
+        "_canAnnounce"
+      );
     });
   }
 
@@ -82,8 +97,14 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
     // The text stays in the box until the server has the message, so nothing is lost on failure
     this._sending = true;
     try {
-      const result = await this.#context.sendMessage(this.channel, this.#toTokens(text));
+      const message = this.#toTokens(text);
+      const result =
+        this._askConfirm || this._important
+          ? await this.#context.sendAnnouncement(this.channel, message, this._important)
+          : await this.#context.sendMessage(this.channel, message);
       this._text = "";
+      this._askConfirm = false;
+      this._important = false;
       this.#picked.clear();
       this.#closeSuggestions();
 
@@ -221,6 +242,24 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
     `;
   }
 
+  #renderAnnounceOptions() {
+    if (!this._canAnnounce || !canAskForConfirmation(this.channel)) return nothing;
+
+    return html`<div class="options">
+      <uui-checkbox
+        label=${this.localize.term("backchat_askConfirm")}
+        ?checked=${this._askConfirm || this._important}
+        ?disabled=${this._important}
+        @change=${(e: Event) => (this._askConfirm = (e.target as HTMLInputElement).checked)}
+      ></uui-checkbox>
+      <uui-checkbox
+        label=${this.localize.term("backchat_markImportant")}
+        ?checked=${this._important}
+        @change=${(e: Event) => (this._important = (e.target as HTMLInputElement).checked)}
+      ></uui-checkbox>
+    </div>`;
+  }
+
   override render() {
     return html`
       <div class="field">
@@ -239,6 +278,7 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
           @blur=${() => this.#closeSuggestions()}
         ></uui-textarea>
       </div>
+      ${this.#renderAnnounceOptions()}
       <div class="actions">
         <span class="hint">${this.localize.term("backchat_sendHint")}</span>
         <uui-button
@@ -302,6 +342,12 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
       margin-left: auto;
       color: var(--uui-color-text-alt);
       font-size: var(--uui-type-small-size);
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--uui-size-space-4);
     }
 
     .actions {

@@ -15,6 +15,25 @@ public class DatabaseChatMessageStore(IScopeProvider scopeProvider) : IChatMessa
         scope.Database.Insert(ChatMessageDto.From(message));
     }
 
+    public IReadOnlyList<ChatMessage> Get(IEnumerable<Guid> keys)
+    {
+        var list = keys.ToList();
+        if (list.Count == 0)
+        {
+            return [];
+        }
+
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .Select<ChatMessageDto>()
+            .From<ChatMessageDto>()
+            .WhereIn<ChatMessageDto>(x => x.Id, list)
+            .OrderBy<ChatMessageDto>(x => x.Date);
+
+        return scope.Database.Fetch<ChatMessageDto>(sql).Select(r => r.ToChatMessage()).ToList();
+    }
+
     public IReadOnlyList<ChatMessage> GetHistory(string channel)
     {
         using IScope scope = scopeProvider.CreateScope(autoComplete: true);

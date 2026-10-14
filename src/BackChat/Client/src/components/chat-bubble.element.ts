@@ -5,6 +5,9 @@ import type { ChatMessage, Mentionables } from "../signalR/types";
 import { BackChatTimeOptions } from "../constants";
 import { BACKCHAT_CONTEXT } from "../global/backchat.context.token";
 import { parseMessage, type MessageSegment } from "../mentions/mentions";
+import { UMB_MODAL_MANAGER_CONTEXT } from "@umbraco-cms/backoffice/modal";
+import { BACKCHAT_CONFIRMATION_STATUS_MODAL } from "../confirmations/confirmation-status-modal.token";
+import type { BackChatContext } from "../global/backchat.context";
 
 @customElement("backchat-chat-bubble")
 export class BackChatChatBubbleElement extends UmbLitElement {
@@ -24,12 +27,22 @@ export class BackChatChatBubbleElement extends UmbLitElement {
   @state()
   private _groupKeys: string[] = [];
 
+  @state()
+  private _pending = false;
+
+  @state()
+  private _confirming = false;
+
+  #context?: BackChatContext;
+
   constructor() {
     super();
 
     this.consumeContext(BACKCHAT_CONTEXT, (context) => {
+      this.#context = context;
       if (!context) return;
       this.observe(context.mentionables, (m) => (this._mentionables = m), "_mentionables");
+      this.#observePending();
     });
 
     this.consumeContext(UMB_CURRENT_USER_CONTEXT, (context) => {
@@ -45,6 +58,55 @@ export class BackChatChatBubbleElement extends UmbLitElement {
     });
   }
 
+  override willUpdate(changed: Map<PropertyKey, unknown>) {
+    if (changed.has("message")) this.#observePending();
+  }
+
+  #observePending() {
+    if (!this.#context || !this.message?.requiresConfirmation) return;
+    this.observe(this.#context.isPending(this.message.key), (pending) => (this._pending = pending), "_pending");
+  }
+
+  async #confirm() {
+    if (!this.#context || !this.message) return;
+    this._confirming = true;
+    try {
+      await this.#context.confirm(this.message.key);
+    } finally {
+      this._confirming = false;
+    }
+  }
+
+  async #openStatus() {
+    const modalManager = await this.getContext(UMB_MODAL_MANAGER_CONTEXT);
+    if (!modalManager || !this.message) return;
+    modalManager.open(this, BACKCHAT_CONFIRMATION_STATUS_MODAL, { data: { message: this.message } });
+  }
+
+  // Asks the reader to confirm, or lets the sender see who has
+  #renderConfirmation() {
+    if (!this.message?.requiresConfirmation) return nothing;
+
+    if (this.isCurrentUser) {
+      return html`<uui-button compact look="secondary" label=${this.localize.term("backchat_seeConfirmations")} @click=${this.#openStatus}>
+        <uui-icon name="icon-check"></uui-icon> ${this.localize.term("backchat_seeConfirmations")}
+      </uui-button>`;
+    }
+
+    if (this._pending) {
+      return html`<uui-button
+        compact
+        look="primary"
+        color="positive"
+        label=${this.localize.term("backchat_confirmRead")}
+        .state=${this._confirming ? "waiting" : undefined}
+        @click=${this.#confirm}
+      ></uui-button>`;
+    }
+
+    return html`<span class="confirmed"><uui-icon name="icon-check"></uui-icon> ${this.localize.term("backchat_nothingToConfirm")}</span>`;
+  }
+
   // A mention of you, or of a group you're in, is highlighted more strongly
   #isMe(segment: MessageSegment) {
     if (segment.kind === "user") return segment.key === this._userKey;
@@ -57,11 +119,21 @@ export class BackChatChatBubbleElement extends UmbLitElement {
     return html`<span class="mention ${this.#isMe(segment) ? "me" : ""}">@${segment.name}</span>`;
   }
 
+  #renderFlag() {
+    if (!this.message?.important) return nothing;
+    return html`<div class="flag"><uui-icon name="icon-alert"></uui-icon> ${this.localize.term("backchat_important")}</div>`;
+  }
+
   override render() {
     if (!this.message) return nothing;
 
     return html`
-      <div class="body">${parseMessage(this.message.message, this._mentionables).map((s) => this.#renderSegment(s))}</div>
+      <!-- No whitespace inside .body: it keeps the message's own line breaks (pre-wrap) -->
+      <div class="body ${this.message.important ? "important" : ""}">${this.#renderFlag()}${parseMessage(
+          this.message.message,
+          this._mentionables
+        ).map((s) => this.#renderSegment(s))}</div>
+      ${this.message.requiresConfirmation ? html`<div class="confirmation">${this.#renderConfirmation()}</div>` : nothing}
       <div class="meta">
         <span class="name">${this.message.userName}</span>
         <span>${this.localize.date(this.message.date, BackChatTimeOptions)}</span>
@@ -94,6 +166,25 @@ export class BackChatChatBubbleElement extends UmbLitElement {
       background-color: var(--uui-color-selected);
       border-color: var(--uui-color-selected);
       color: var(--uui-color-selected-contrast);
+    }
+
+    .body.important {
+      border-left: 4px solid var(--uui-color-warning-standalone);
+    }
+
+    .flag {
+      font-weight: 700;
+      font-size: var(--uui-type-small-size);
+      margin-bottom: var(--uui-size-space-1);
+    }
+
+    .confirmation {
+      margin-top: var(--uui-size-space-2);
+    }
+
+    .confirmed {
+      color: var(--uui-color-positive-standalone);
+      font-size: var(--uui-type-small-size);
     }
 
     .meta {

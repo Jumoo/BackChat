@@ -20,6 +20,8 @@ public class BackChatComposer : IComposer
         builder.Services.AddSingleton<MentionService>();
         builder.Services.AddSingleton<UnreadService>();
         builder.Services.AddSingleton<ConversationService>();
+        builder.Services.AddSingleton<IConfirmationStore, DatabaseConfirmationStore>();
+        builder.Services.AddSingleton<ConfirmationService>();
 
         builder.AddBackChatHub();
 
