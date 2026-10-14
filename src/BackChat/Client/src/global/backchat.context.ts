@@ -3,6 +3,7 @@ import type { UmbControllerHost } from "@umbraco-cms/backoffice/controller-api";
 import { UMB_AUTH_CONTEXT } from "@umbraco-cms/backoffice/auth";
 import { UMB_SERVER_CONTEXT } from "@umbraco-cms/backoffice/server";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
+import { UMB_CURRENT_USER_CONTEXT } from "@umbraco-cms/backoffice/current-user";
 import { UmbLocalizationController } from "@umbraco-cms/backoffice/localization-api";
 import { UmbArrayState, UmbBooleanState, UmbObjectState } from "@umbraco-cms/backoffice/observable-api";
 import {
@@ -41,6 +42,10 @@ export class BackChatContext extends UmbContextBase {
   #mentionables = new UmbObjectState<Mentionables>({ users: [], groups: [] });
   public readonly mentionables = this.#mentionables.asObservable();
 
+  // The current user's permissions, from all their groups. Used to hide what they can't do;
+  // the server checks again on every guarded action.
+  #permissions = new UmbArrayState<string>([], (p) => p);
+
   #messages = new UmbArrayState<ChatMessage>([], (m) => m.key);
 
   #isConnected = new UmbBooleanState(false);
@@ -60,6 +65,15 @@ export class BackChatContext extends UmbContextBase {
       this.#observeIsAuthorized();
     });
 
+    this.consumeContext(UMB_CURRENT_USER_CONTEXT, (context) => {
+      if (!context) return;
+      this.observe(
+        context.currentUser,
+        (user) => this.#permissions.setValue(user?.fallbackPermissions ?? []),
+        "_permissions"
+      );
+    });
+
     this.consumeContext(UMB_SERVER_CONTEXT, (context) => {
       this.#serverContext = context;
       this.#observeIsAuthorized();
@@ -68,6 +82,10 @@ export class BackChatContext extends UmbContextBase {
 
   messagesOf(channel: string) {
     return this.#messages.asObservablePart((list) => list.filter((m) => m.channel === channel));
+  }
+
+  hasPermission(permission: string) {
+    return this.#permissions.asObservablePart((list) => list.includes(permission));
   }
 
   unreadOf(channel: string) {

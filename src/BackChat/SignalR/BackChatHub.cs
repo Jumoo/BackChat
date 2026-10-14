@@ -1,3 +1,4 @@
+using BackChat.Security;
 using BackChat.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -75,6 +76,13 @@ public class BackChatHub(
             UserName = user.Name ?? user.Username,
             UserKey = user.Key,
         };
+
+        // A group mention is close to an announcement, so it needs its own permission
+        if (MentionService.Parse(chatMessage.Message).Any(m => m.Kind == "group")
+            && user.Has(BackChatPermissions.MentionGroups) is false)
+        {
+            throw new HubException("You don't have permission to mention a whole user group.");
+        }
 
         MentionResult mentions = await mentionService.ResolveAsync(chatMessage.Message, user, channel);
 
