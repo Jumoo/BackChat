@@ -25,6 +25,12 @@ export class BackChatChatMessagesElement extends UmbLitElement {
 
   #context?: BackChatContext;
 
+  // Unread in this channel. The chat is on screen when this element exists, so it only
+  // has to wait for the browser tab to be visible before marking the channel read.
+  #unread = 0;
+
+  #onVisibilityChange = () => this.#markReadIfVisible();
+
   constructor() {
     super();
 
@@ -37,6 +43,16 @@ export class BackChatChatMessagesElement extends UmbLitElement {
       if (!context) return;
       this.observe(context.unique, (unique) => (this._currentUserKey = unique), "_currentUserKey");
     });
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("visibilitychange", this.#onVisibilityChange);
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("visibilitychange", this.#onVisibilityChange);
   }
 
   override willUpdate(changed: PropertyValues) {
@@ -61,6 +77,20 @@ export class BackChatChatMessagesElement extends UmbLitElement {
       (messages) => (this._messages = messages),
       "_messages"
     );
+
+    this.observe(
+      this.#context.unreadOf(this.channel),
+      (count) => {
+        this.#unread = count?.unread ?? 0;
+        this.#markReadIfVisible();
+      },
+      "_unread"
+    );
+  }
+
+  #markReadIfVisible() {
+    if (this.#unread === 0 || document.visibilityState !== "visible" || !this.isConnected) return;
+    this.#context?.markRead(this.channel);
   }
 
   override render() {

@@ -14,6 +14,9 @@ public class BackChatComposer : IComposer
     public void Compose(IUmbracoBuilder builder)
     {
         builder.Services.AddSingleton<IChatMessageStore, DatabaseChatMessageStore>();
+        builder.Services.AddSingleton<IReadStateStore, DatabaseReadStateStore>();
+        builder.Services.AddSingleton<ChannelAccessService>();
+        builder.Services.AddSingleton<UnreadService>();
 
         builder.AddBackChatHub();
 

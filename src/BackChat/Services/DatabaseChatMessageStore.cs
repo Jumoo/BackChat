@@ -30,4 +30,46 @@ public class DatabaseChatMessageStore(IScopeProvider scopeProvider) : IChatMessa
 
         return rows.Select(r => r.ToChatMessage()).Reverse().ToList();
     }
+
+    public int CountSince(string channel, DateTime? since, Guid userKey)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .SelectCount()
+            .From<ChatMessageDto>()
+            .Where<ChatMessageDto>(x => x.Channel == channel && (x.UserKey == null || x.UserKey != userKey));
+
+        if (since is not null)
+        {
+            DateTime date = since.Value;
+            sql = sql.Where<ChatMessageDto>(x => x.Date > date);
+        }
+
+        return scope.Database.ExecuteScalar<int>(sql);
+    }
+
+    public IReadOnlyList<string> GetChannelsPostedIn(Guid userKey)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .SelectDistinct<ChatMessageDto>(x => x.Channel)
+            .From<ChatMessageDto>()
+            .Where<ChatMessageDto>(x => x.UserKey == userKey);
+
+        return scope.Database.Fetch<string>(sql);
+    }
+
+    public IReadOnlyList<Guid> GetPosters(string channel)
+    {
+        using IScope scope = scopeProvider.CreateScope(autoComplete: true);
+
+        var sql = scope.SqlContext.Sql()
+            .SelectDistinct<ChatMessageDto>(x => x.UserKey)
+            .From<ChatMessageDto>()
+            .Where<ChatMessageDto>(x => x.Channel == channel && x.UserKey != null);
+
+        return scope.Database.Fetch<Guid>(sql);
+    }
 }

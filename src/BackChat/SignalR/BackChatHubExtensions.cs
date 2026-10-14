@@ -9,6 +9,8 @@ public static class BackChatHubExtensions
     {
         builder.Services.AddSignalR();
         builder.Services.AddSingleton<BackChatHubRoutes>();
+        builder.Services.AddSingleton<BackChatConnections>();
+        builder.Services.AddSingleton<BackChatNotifier>();
         builder.Services.ConfigureOptions<ConfigureHubOptions>();
 
         return builder;
