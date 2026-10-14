@@ -119,15 +119,20 @@ export class BackChatChatBubbleElement extends UmbLitElement {
     return html`<span class="mention ${this.#isMe(segment) ? "me" : ""}">@${segment.name}</span>`;
   }
 
+  #renderFlag() {
+    if (!this.message?.important) return nothing;
+    return html`<div class="flag"><uui-icon name="icon-alert"></uui-icon> ${this.localize.term("backchat_important")}</div>`;
+  }
+
   override render() {
     if (!this.message) return nothing;
 
     return html`
-      <div class="body ${this.message.important ? "important" : ""}">
-        ${this.message.important
-          ? html`<div class="flag"><uui-icon name="icon-alert"></uui-icon> ${this.localize.term("backchat_important")}</div>`
-          : nothing}${parseMessage(this.message.message, this._mentionables).map((s) => this.#renderSegment(s))}
-      </div>
+      <!-- No whitespace inside .body: it keeps the message's own line breaks (pre-wrap) -->
+      <div class="body ${this.message.important ? "important" : ""}">${this.#renderFlag()}${parseMessage(
+          this.message.message,
+          this._mentionables
+        ).map((s) => this.#renderSegment(s))}</div>
       ${this.message.requiresConfirmation ? html`<div class="confirmation">${this.#renderConfirmation()}</div>` : nothing}
       <div class="meta">
         <span class="name">${this.message.userName}</span>
