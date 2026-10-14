@@ -5,6 +5,8 @@ import type { UmbLocalizationDictionary } from "@umbraco-cms/backoffice/localiza
 const enUs: UmbLocalizationDictionary = {
   backchat: {
     chat: "Chat",
+    // The document tab that holds the chat and, later, other comms apps
+    commsTab: "Chat",
     message: "Message",
     messagePlaceholder: "Your message",
     connecting: "Connecting to chat…",
