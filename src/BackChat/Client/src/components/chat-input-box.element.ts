@@ -16,6 +16,8 @@ interface Suggestion {
 
 const MAX_SUGGESTIONS = 8;
 
+type SendKind = "message" | "confirm" | "important";
+
 // The "@query" being typed just before the caret, if any
 const MENTION_QUERY = /(?:^|\s)@([^\s@]*)$/;
 
@@ -39,12 +41,8 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
   @state()
   private _canAnnounce = false;
 
-  // Ask each recipient to confirm; important also holds their screen until they do
-  @state()
-  private _askConfirm = false;
-
-  @state()
-  private _important = false;
+  // How the next message is sent: plainly, asking each reader to confirm, or as important
+  // (which also holds their screen until they confirm)
 
   @state()
   private _active = 0;
@@ -90,7 +88,7 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
     return text;
   }
 
-  async #send() {
+  async #send(kind: SendKind = "message") {
     const text = this._text.trim();
     if (!text || !this.channel || !this.#context || this._sending) return;
 
@@ -99,12 +97,10 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
     try {
       const message = this.#toTokens(text);
       const result =
-        this._askConfirm || this._important
-          ? await this.#context.sendAnnouncement(this.channel, message, this._important)
-          : await this.#context.sendMessage(this.channel, message);
+        kind === "message"
+          ? await this.#context.sendMessage(this.channel, message)
+          : await this.#context.sendAnnouncement(this.channel, message, kind === "important");
       this._text = "";
-      this._askConfirm = false;
-      this._important = false;
       this.#picked.clear();
       this.#closeSuggestions();
 
@@ -242,22 +238,51 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
     `;
   }
 
-  #renderAnnounceOptions() {
-    if (!this._canAnnounce || !canAskForConfirmation(this.channel)) return nothing;
+  // Send, with a menu of the other ways to send beside it, as the workspace's
+  // "Save and publish" does. The menu only shows for users who can send these, in channels
+  // where they're allowed.
+  #renderSend() {
+    const send = html`<uui-button
+      look="primary"
+      color="positive"
+      label=${this.localize.term("backchat_send")}
+      .state=${this._sending ? "waiting" : undefined}
+      ?disabled=${!this._isConnected}
+      @click=${() => this.#send()}
+    ></uui-button>`;
 
-    return html`<div class="options">
-      <uui-checkbox
-        label=${this.localize.term("backchat_askConfirm")}
-        ?checked=${this._askConfirm || this._important}
-        ?disabled=${this._important}
-        @change=${(e: Event) => (this._askConfirm = (e.target as HTMLInputElement).checked)}
-      ></uui-checkbox>
-      <uui-checkbox
-        label=${this.localize.term("backchat_markImportant")}
-        ?checked=${this._important}
-        @change=${(e: Event) => (this._important = (e.target as HTMLInputElement).checked)}
-      ></uui-checkbox>
-    </div>`;
+    if (!this._canAnnounce || !canAskForConfirmation(this.channel)) return send;
+
+    return html`
+      <uui-button-group>
+        ${send}
+        <uui-button
+          popovertarget="send-options"
+          look="primary"
+          color="positive"
+          compact
+          label=${this.localize.term("backchat_sendOptions")}
+          ?disabled=${!this._isConnected || this._sending}
+        >
+          <uui-symbol-expand open></uui-symbol-expand>
+        </uui-button>
+      </uui-button-group>
+      <uui-popover-container id="send-options" placement="top-end">
+        <umb-popover-layout>
+          <uui-menu-item label=${this.localize.term("backchat_sendAskConfirm")} @click=${() => this.#sendFromMenu("confirm")}>
+            <umb-icon slot="icon" name="icon-check"></umb-icon>
+          </uui-menu-item>
+          <uui-menu-item label=${this.localize.term("backchat_sendImportant")} @click=${() => this.#sendFromMenu("important")}>
+            <umb-icon slot="icon" name="icon-alert"></umb-icon>
+          </uui-menu-item>
+        </umb-popover-layout>
+      </uui-popover-container>
+    `;
+  }
+
+  #sendFromMenu(kind: SendKind) {
+    (this.shadowRoot?.getElementById("send-options") as HTMLElement & { hidePopover?: () => void })?.hidePopover?.();
+    this.#send(kind);
   }
 
   override render() {
@@ -278,17 +303,9 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
           @blur=${() => this.#closeSuggestions()}
         ></uui-textarea>
       </div>
-      ${this.#renderAnnounceOptions()}
       <div class="actions">
         <span class="hint">${this.localize.term("backchat_sendHint")}</span>
-        <uui-button
-          look="primary"
-          color="positive"
-          label=${this.localize.term("backchat_send")}
-          .state=${this._sending ? "waiting" : undefined}
-          ?disabled=${!this._isConnected}
-          @click=${this.#send}
-        ></uui-button>
+        ${this.#renderSend()}
       </div>
     `;
   }
@@ -342,12 +359,6 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
       margin-left: auto;
       color: var(--uui-color-text-alt);
       font-size: var(--uui-type-small-size);
-    }
-
-    .options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--uui-size-space-4);
     }
 
     .actions {

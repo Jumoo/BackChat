@@ -11,6 +11,7 @@ import { BackChatDashboardListBase } from "./dashboard-list-base";
 @customElement("backchat-dashboard-confirmations")
 export class BackChatDashboardConfirmationsElement extends BackChatDashboardListBase<ChatMessage> {
   protected headline = "#backchat_dashboardConfirmations";
+  protected icon = "icon-alert";
   protected emptyText = "backchat_dashboardNoConfirmations";
 
   #context?: BackChatContext;
@@ -35,21 +36,21 @@ export class BackChatDashboardConfirmationsElement extends BackChatDashboardList
   }
 
   protected renderItem(message: ChatMessage) {
-    return html`<div class="row">
-      <uui-icon name=${message.important ? "icon-alert" : "icon-message"}></uui-icon>
-      <span class="text">
-        <span class="title">${message.userName}</span>
-        <span class="detail">${toPlainText(message.message, this.#mentionables)}</span>
-        <span class="detail">${this.localize.date(message.date, BackChatTimeOptions)}</span>
-      </span>
-      <uui-button
-        look="primary"
-        color="positive"
-        compact
-        label=${this.localize.term("backchat_confirmRead")}
-        @click=${() => this.#context?.confirm(message.key)}
-      ></uui-button>
-    </div>`;
+    return html`<uui-ref-node
+      readonly
+      name=${message.userName}
+      detail=${`${this.localize.date(message.date, BackChatTimeOptions)} · ${toPlainText(message.message, this.#mentionables)}`}
+    >
+      <umb-icon slot="icon" name=${message.important ? "icon-alert" : "icon-message"}></umb-icon>
+      <uui-action-bar slot="actions">
+        <uui-button
+          look="primary"
+          color="positive"
+          label=${this.localize.term("backchat_confirmRead")}
+          @click=${() => this.#context?.confirm(message.key)}
+        ></uui-button>
+      </uui-action-bar>
+    </uui-ref-node>`;
   }
 }
 

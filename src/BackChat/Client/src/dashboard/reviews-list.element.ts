@@ -7,6 +7,7 @@ import { BackChatDashboardListBase } from "./dashboard-list-base";
 @customElement("backchat-dashboard-reviews")
 export class BackChatDashboardReviewsElement extends BackChatDashboardListBase<DueReview> {
   protected headline = "#backchat_dashboardReviews";
+  protected icon = "icon-calendar";
   protected emptyText = "backchat_dashboardNoReviews";
 
   protected async loadPage(skip: number, take: number) {
@@ -15,15 +16,14 @@ export class BackChatDashboardReviewsElement extends BackChatDashboardListBase<D
   }
 
   protected renderItem(review: DueReview) {
-    return html`<button class="row" @click=${() => openDocumentComms(review.documentKey)}>
-      <uui-icon name="icon-calendar"></uui-icon>
-      <span class="text">
-        <span class="title">${review.documentName}</span>
-        <span class="detail overdue">
-          ${this.localize.term("backchat_reviewOverdue", this.localize.date(review.nextReview, { dateStyle: "medium" }))}
-        </span>
-      </span>
-    </button>`;
+    return html`<uui-ref-node
+      name=${review.documentName ?? ""}
+      detail=${this.localize.term("backchat_reviewDueSince", this.localize.date(review.nextReview, { dateStyle: "medium" }))}
+      @open=${() => openDocumentComms(review.documentKey)}
+    >
+      <umb-icon slot="icon" name="icon-document"></umb-icon>
+      <uui-tag slot="tag" color="danger"><span class="tag-content"><umb-icon name="icon-alert"></umb-icon> ${this.localize.term("backchat_overdue")}</span></uui-tag>
+    </uui-ref-node>`;
   }
 }
 

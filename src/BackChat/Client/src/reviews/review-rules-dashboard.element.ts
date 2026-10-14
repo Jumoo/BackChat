@@ -2,6 +2,7 @@ import { css, customElement, html, nothing, state } from "@umbraco-cms/backoffic
 import { UmbLitElement } from "@umbraco-cms/backoffice/lit-element";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { Reviews, type ReviewRule } from "../api";
+import "../comms/comms-app-layout.element";
 
 interface RuleDraft {
   id?: string;
@@ -74,7 +75,7 @@ export class BackChatReviewRulesDashboardElement extends UmbLitElement {
     if (!draft) return nothing;
 
     return html`
-      <uui-box headline=${this.localize.term(draft.id ? "backchat_editRule" : "backchat_addRule")}>
+      <backchat-comms-app-layout headline=${draft.id ? "#backchat_editRule" : "#backchat_addRule"} icon="icon-edit">
         <umb-property-layout label=${this.localize.term("backchat_ruleContentType")} orientation="vertical">
           <umb-input-document-type
             slot="editor"
@@ -117,13 +118,13 @@ export class BackChatReviewRulesDashboardElement extends UmbLitElement {
             @click=${this.#save}
           ></uui-button>
         </div>
-      </uui-box>
+      </backchat-comms-app-layout>
     `;
   }
 
   override render() {
     return html`
-      <uui-box headline=${this.localize.term("backchat_reviewRules")}>
+      <backchat-comms-app-layout headline="#backchat_reviewRules" icon="icon-calendar" .count=${this._rules.length}>
         <uui-button slot="header-actions" look="secondary" label=${this.localize.term("backchat_addRule")} @click=${() => (this._draft = emptyDraft())}>
           <uui-icon name="icon-add"></uui-icon> ${this.localize.term("backchat_addRule")}
         </uui-button>
@@ -160,7 +161,7 @@ export class BackChatReviewRulesDashboardElement extends UmbLitElement {
                 </uui-table-row>`
               )}
             </uui-table>`}
-      </uui-box>
+      </backchat-comms-app-layout>
       ${this.#renderEditor()}
     `;
   }

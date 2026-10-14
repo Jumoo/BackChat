@@ -215,16 +215,15 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
           <span class="title">${task.title}</span>
           ${assignee || task.dueDate
             ? html`<span class="details">
-                ${assignee ? html`<span><uui-icon name="icon-user"></uui-icon> ${assignee}</span>` : nothing}
                 ${task.dueDate
-                  ? html`<span class=${overdue ? "overdue" : ""}>
-                      <uui-icon name="icon-calendar"></uui-icon> ${this.localize.date(task.dueDate, { dateStyle: "medium" })}
-                    </span>`
+                  ? html`<uui-tag look=${overdue ? "primary" : "secondary"} color=${overdue ? "danger" : "default"}><span class="tag-content"><umb-icon name=${overdue ? "icon-alert" : "icon-calendar"}></umb-icon>
+                      ${this.localize.date(task.dueDate, { dateStyle: "medium" })}</span></uui-tag>`
                   : nothing}
+                ${assignee ? html`<span class="assignee"><umb-icon name="icon-user"></umb-icon> ${assignee}</span>` : nothing}
               </span>`
             : nothing}
         </button>
-        <div class="row-actions">
+        <uui-action-bar class="row-actions">
           <uui-button compact label=${this.localize.term("backchat_moveUp")} ?disabled=${index === 0} @click=${() => this.#move(index, -1)}>
             <uui-icon name="icon-arrow-up"></uui-icon>
           </uui-button>
@@ -244,17 +243,23 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
           >
             <uui-icon name="icon-trash"></uui-icon>
           </uui-button>
-        </div>
+        </uui-action-bar>
       </li>
     `;
   }
 
   override render() {
     return html`
-      <backchat-comms-app-layout headline="#backchat_tasks">
+      <backchat-comms-app-layout
+        headline="#backchat_tasks"
+        icon="icon-checkbox"
+        .count=${this._tasks.filter((t) => !t.isComplete).length}
+      >
         ${this.#canUse
           ? html`
-              ${this._tasks.length === 0 ? html`<p class="empty">${this.localize.term("backchat_noTasks")}</p>` : nothing}
+              ${this._tasks.length === 0
+                ? html`<p class="empty"><umb-icon name="icon-check"></umb-icon> ${this.localize.term("backchat_noTasks")}</p>`
+                : nothing}
               <ul>
                 ${repeat(
                   this._tasks,
@@ -282,6 +287,13 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
   }
 
   static override styles = css`
+    /* Icon and text side by side inside a tag */
+    .tag-content {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--uui-size-space-1);
+      white-space: nowrap;
+    }
     ul {
       list-style: none;
       margin: 0 0 var(--uui-size-space-3);
@@ -290,9 +302,9 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
 
     li {
       display: flex;
-      align-items: flex-start;
-      gap: var(--uui-size-space-2);
-      padding: var(--uui-size-space-2) 0;
+      align-items: center;
+      gap: var(--uui-size-space-3);
+      padding: var(--uui-size-space-3) 0;
       border-bottom: 1px solid var(--uui-color-divider);
     }
 
@@ -305,6 +317,7 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
+      gap: var(--uui-size-space-1);
       min-width: 0;
       padding: 0;
       border: none;
@@ -327,19 +340,22 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
     .details {
       display: flex;
       flex-wrap: wrap;
-      gap: var(--uui-size-space-3);
+      align-items: center;
+      gap: var(--uui-size-space-2);
       color: var(--uui-color-text-alt);
       font-size: var(--uui-type-small-size);
     }
 
-    .overdue {
-      color: var(--uui-color-danger-standalone);
-      font-weight: 700;
+    .assignee {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--uui-size-space-1);
     }
 
+    /* Row actions stay out of the way until the row is pointed at or focused */
     .row-actions {
-      display: flex;
-      opacity: 0.4;
+      opacity: 0;
+      transition: opacity 120ms;
     }
 
     li:hover .row-actions,
@@ -360,8 +376,15 @@ export class BackChatTasksCommsAppElement extends UmbLitElement {
     }
 
     .empty {
-      margin: 0 0 var(--uui-size-space-3);
+      display: flex;
+      align-items: center;
+      gap: var(--uui-size-space-2);
+      margin: 0 0 var(--uui-size-space-4);
       color: var(--uui-color-text-alt);
+    }
+
+    .empty umb-icon {
+      color: var(--uui-color-positive-standalone);
     }
   `;
 }

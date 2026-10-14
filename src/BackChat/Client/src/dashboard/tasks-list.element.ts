@@ -5,10 +5,13 @@ import { Tasks, type TaskResponseModel } from "../api";
 import { openDocumentComms } from "../comms/open-comms";
 import { BackChatDashboardListBase } from "./dashboard-list-base";
 
+const DateOptions: Intl.DateTimeFormatOptions = { dateStyle: "medium" };
+
 // Open tasks: the user's own, soonest due first, or everyone's in the everything view
 @customElement("backchat-dashboard-tasks")
 export class BackChatDashboardTasksElement extends BackChatDashboardListBase<TaskResponseModel> {
   protected headline = "#backchat_dashboardTasks";
+  protected icon = "icon-checkbox";
   protected emptyText = "backchat_dashboardNoTasks";
 
   #mentionables: Mentionables = { users: [], groups: [] };
@@ -31,24 +34,21 @@ export class BackChatDashboardTasksElement extends BackChatDashboardListBase<Tas
     return { items: data?.items ?? [], total: data?.total ?? 0 };
   }
 
+  #detail(task: TaskResponseModel) {
+    const assignee = this.everyone ? this.#mentionables.users.find((u) => u.key === task.assigneeKey)?.name : undefined;
+    return [task.documentName, assignee].filter(Boolean).join(" · ");
+  }
+
   protected renderItem(task: TaskResponseModel) {
     const overdue = !!task.dueDate && new Date(task.dueDate) < new Date();
-    const assignee = this.#mentionables.users.find((u) => u.key === task.assigneeKey)?.name;
 
-    return html`<button class="row" @click=${() => openDocumentComms(task.documentKey)}>
-      <uui-icon name="icon-check"></uui-icon>
-      <span class="text">
-        <span class="title">${task.title}</span>
-        <span class="detail">
-          ${task.documentName}${this.everyone && assignee ? html` · ${assignee}` : nothing}
-          ${task.dueDate
-            ? html` · <span class=${overdue ? "overdue" : ""}
-                  >${this.localize.term("backchat_due", this.localize.date(task.dueDate, { dateStyle: "medium" }))}</span
-                >`
-            : nothing}
-        </span>
-      </span>
-    </button>`;
+    return html`<uui-ref-node name=${task.title} detail=${this.#detail(task)} @open=${() => openDocumentComms(task.documentKey)}>
+      <umb-icon slot="icon" name="icon-checkbox-empty"></umb-icon>
+      ${task.dueDate
+        ? html`<uui-tag slot="tag" look=${overdue ? "primary" : "secondary"} color=${overdue ? "danger" : "default"}><span class="tag-content">${overdue ? html`<umb-icon name="icon-alert"></umb-icon>` : html`<umb-icon name="icon-calendar"></umb-icon>`}
+            ${this.localize.date(task.dueDate, DateOptions)}</span></uui-tag>`
+        : nothing}
+    </uui-ref-node>`;
   }
 }
 

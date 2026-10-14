@@ -54,6 +54,14 @@ export class BackChatCommsWorkspaceViewElement extends UmbLitElement {
       grid-template-columns: minmax(0, 1fr) 350px;
     }
 
+    /* Too narrow for two columns: stack the side column under the main one */
+    @media (max-width: 1100px) {
+      .layout.has-aside {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+      }
+    }
+
     .column {
       display: flex;
       flex-direction: column;

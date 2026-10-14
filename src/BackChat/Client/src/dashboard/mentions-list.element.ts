@@ -5,6 +5,7 @@ import type { ChatMessage, Mentionables } from "../signalR/types";
 import { BackChatTimeOptions } from "../constants";
 import { toPlainText } from "../mentions/mentions";
 import { activityText, isActivity } from "../activity/activity";
+import { conversationIcon } from "../conversations/conversation-title";
 import { BackChatDashboardListBase } from "./dashboard-list-base";
 import { openChannel } from "./open-conversation";
 
@@ -12,6 +13,7 @@ import { openChannel } from "./open-conversation";
 @customElement("backchat-dashboard-mentions")
 export class BackChatDashboardMentionsElement extends BackChatDashboardListBase<UnreadMention> {
   protected headline = "#backchat_dashboardMentions";
+  protected icon = "icon-chat";
   protected emptyText = "backchat_dashboardNoMentions";
 
   #mentionables: Mentionables = { users: [], groups: [] };
@@ -46,14 +48,14 @@ export class BackChatDashboardMentionsElement extends BackChatDashboardListBase<
       ? activityText(asMessage, (k, ...a) => this.localize.term(k, ...a))
       : `${mention.userName}: ${toPlainText(mention.message, this.#mentionables)}`;
 
-    return html`<button class="row" @click=${() => openChannel(this, mention.channel, mention.kind, mention.title)}>
-      <uui-icon name="icon-chat"></uui-icon>
-      <span class="text">
-        <span class="title">${this.#where(mention)}</span>
-        <span class="detail">${text}</span>
-        <span class="detail">${this.localize.date(mention.date, BackChatTimeOptions)}</span>
-      </span>
-    </button>`;
+    return html`<uui-ref-node
+      name=${this.#where(mention)}
+      detail=${text}
+      @open=${() => openChannel(this, mention.channel, mention.kind, mention.title)}
+    >
+      <umb-icon slot="icon" name=${conversationIcon({ channel: mention.channel, kind: mention.kind, participants: [] })}></umb-icon>
+      <uui-tag slot="tag" look="secondary">${this.localize.date(mention.date, BackChatTimeOptions)}</uui-tag>
+    </uui-ref-node>`;
   }
 }
 
