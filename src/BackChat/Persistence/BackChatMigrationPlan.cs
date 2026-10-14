@@ -14,5 +14,6 @@ public class BackChatMigrationPlan : PackageMigrationPlan
         To<CreateChatMessagesTable>("create-chat-messages-table");
         To<CreateReadStateTable>("create-read-state-table");
         To<CreateMentionsTable>("create-mentions-table");
+        To<GrantPermissionsToAdministrators>("grant-permissions-to-administrators");
     }
 }

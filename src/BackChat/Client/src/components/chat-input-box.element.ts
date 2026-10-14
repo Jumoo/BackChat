@@ -6,6 +6,7 @@ import type { BackChatContext } from "../global/backchat.context";
 import { BACKCHAT_MAX_MESSAGE_LENGTH } from "../constants";
 import type { Mentionables } from "../signalR/types";
 import { groupToken, userToken } from "../mentions/mentions";
+import { BACKCHAT_PERMISSION_MENTION_GROUPS } from "../permissions/constants";
 
 interface Suggestion {
   name: string;
@@ -40,6 +41,7 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
 
   #context?: BackChatContext;
   #mentionables: Mentionables = { users: [], groups: [] };
+  #canMentionGroups = false;
 
   // The box shows "@Name" while you type; each one picked from the list is swapped for its
   // token when the message is sent
@@ -56,6 +58,11 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
       if (!context) return;
       this.observe(context.isConnected, (connected) => (this._isConnected = connected), "_isConnected");
       this.observe(context.mentionables, (m) => (this.#mentionables = m), "_mentionables");
+      this.observe(
+        context.hasPermission(BACKCHAT_PERMISSION_MENTION_GROUPS),
+        (allowed) => (this.#canMentionGroups = allowed),
+        "_canMentionGroups"
+      );
     });
   }
 
@@ -127,7 +134,7 @@ export class BackChatChatInputBoxElement extends UmbLitElement {
       ...this.#mentionables.users
         .filter((u) => matches(u.name))
         .map((u) => ({ name: u.name, token: userToken(u.key), isGroup: false })),
-      ...this.#mentionables.groups
+      ...(this.#canMentionGroups ? this.#mentionables.groups : [])
         .filter((g) => matches(g.name, g.alias))
         .map((g) => ({ name: g.name, token: groupToken(g.alias), isGroup: true })),
     ].slice(0, MAX_SUGGESTIONS);
