@@ -28,11 +28,14 @@ public class ActivityService(
         return current.Enabled && current.Events.Contains(action, StringComparer.OrdinalIgnoreCase);
     }
 
-    public async Task PostAsync(Guid documentKey, string action, IUser? user)
+    /// <returns>The line posted, or null when that kind of activity is turned off or the
+    /// line was folded into an earlier one.</returns>
+    public async Task<ChatMessage?> PostAsync(
+        Guid documentKey, string action, IUser? user, string? title = null, string? target = null)
     {
         if (IsEnabled(action) is false)
         {
-            return;
+            return null;
         }
 
         string channel = documentKey.ToString();
@@ -50,17 +53,17 @@ public class ActivityService(
                 && age < TimeSpan.FromMinutes(options.CurrentValue.CollapseMinutes))
             {
                 await UpdateAsync(latest, latestActivity with { Count = latestActivity.Count + 1 }, now);
-                return;
+                return null;
             }
 
-            if (action != ContentActivity.Saved
+            if (ContentActivity.FollowsSave(action)
                 && latestActivity.Action == ContentActivity.Saved
                 && age < SaveThenActWindow)
             {
                 if (latestActivity.Count == 1)
                 {
                     await UpdateAsync(latest, new ActivityPayload(action), now);
-                    return;
+                    return null;
                 }
 
                 // Take the save that came with this action back off the earlier saves
@@ -73,7 +76,7 @@ public class ActivityService(
             Channel = channel,
             Message = string.Empty,
             Type = ChatMessage.ActivityType,
-            Payload = JsonSerializer.Serialize(new ActivityPayload(action), JsonOptions),
+            Payload = JsonSerializer.Serialize(new ActivityPayload(action, Title: title, Target: target), JsonOptions),
             UserName = user?.Name ?? user?.Username ?? string.Empty,
             UserKey = user?.Key,
             Date = now,
@@ -81,6 +84,7 @@ public class ActivityService(
 
         messageStore.Add(message);
         await SendAsync(message);
+        return message;
     }
 
     private async Task UpdateAsync(ChatMessage message, ActivityPayload payload, DateTime date)

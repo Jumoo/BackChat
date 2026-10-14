@@ -1,8 +1,10 @@
 using BackChat.Activity;
+using BackChat.Api;
 using BackChat.Manifest;
 using BackChat.Persistence;
 using BackChat.Services;
 using BackChat.SignalR;
+using BackChat.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
@@ -36,7 +38,12 @@ public class BackChatComposer : IComposer
             .AddNotificationAsyncHandler<ContentCopiedNotification, ContentActivityNotificationHandler>()
             .AddNotificationAsyncHandler<ContentRolledBackNotification, ContentActivityNotificationHandler>();
 
+        builder.Services.AddSingleton<ITaskStore, DatabaseTaskStore>();
+        builder.Services.AddSingleton<TaskService>();
+        builder.AddNotificationHandler<ContentDeletedNotification, DeleteTasksWithDocumentHandler>();
+
         builder.AddBackChatHub();
+        builder.AddBackChatApi();
 
         // Adds our bundle to the backoffice alongside the manifests Umbraco reads itself
         builder.Services.AddSingleton<IPackageManifestReader, BackChatPackageManifestReader>();

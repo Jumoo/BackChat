@@ -41,4 +41,16 @@ const chatCommsApp: ManifestBackChatCommsApp = {
   },
 };
 
-export const manifests = [commsWorkspaceView, unreadHintWorkspaceContext, chatCommsApp];
+// The document's to-do list, beside the chat
+const tasksCommsApp: ManifestBackChatCommsApp = {
+  type: BACKCHAT_COMMS_APP_TYPE,
+  alias: "BackChat.CommsApp.Tasks",
+  name: "BackChat Tasks Comms App",
+  element: () => import("./tasks/tasks-comms-app.element"),
+  weight: 100,
+  meta: {
+    area: "aside",
+  },
+};
+
+export const manifests = [commsWorkspaceView, unreadHintWorkspaceContext, chatCommsApp, tasksCommsApp];

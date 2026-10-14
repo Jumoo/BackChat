@@ -70,6 +70,11 @@ export class BackChatContext extends UmbContextBase {
   #importantOpen?: string;
   #importantModal?: { reject: () => void };
 
+  // The latest document whose tasks changed, so open task panels reload. Stamped, so the
+  // same document changing twice still counts as two changes.
+  #tasksChanged = new UmbObjectState<{ documentKey: string; at: number } | undefined>(undefined);
+  public readonly tasksChanged = this.#tasksChanged.asObservable();
+
   // The current user's permissions, from all their groups. Used to hide what they can't do;
   // the server checks again on every guarded action.
   #permissions = new UmbArrayState<string>([], (p) => p);
@@ -342,6 +347,19 @@ export class BackChatContext extends UmbContextBase {
     });
 
     connection.on("mention", (message: ChatMessage) => this.#onMention(message));
+
+    connection.on("tasksChanged", (documentKey: string) => this.#tasksChanged.setValue({ documentKey, at: Date.now() }));
+    connection.on("taskAssigned", (task: { documentKey: string; title: string; assignedBy: string }) => {
+      if (this.#isChannelOnScreen(task.documentKey)) return;
+      this.getContext(UMB_NOTIFICATION_CONTEXT).then((notifications) =>
+        notifications?.peek("default", {
+          data: {
+            headline: this.#localize.term("backchat_taskAssignedHeadline", task.assignedBy),
+            message: task.title,
+          },
+        })
+      );
+    });
 
     connection.on("pendingConfirmations", (messages: ChatMessage[]) => this.#pending.setValue(messages));
     connection.on("confirmationRequested", (message: ChatMessage) => this.#onConfirmationRequested(message));

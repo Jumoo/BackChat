@@ -14,8 +14,18 @@ public static class ContentActivity
     public const string RolledBack = "RolledBack";
     public const string Trashed = "Trashed";
     public const string Restored = "Restored";
+    public const string TaskAssigned = "TaskAssigned";
+    public const string TaskCompleted = "TaskCompleted";
+
+    /// <summary>
+    /// Actions that come with a save of their own ("Save and publish"), so a save line just
+    /// before them is folded in.
+    /// </summary>
+    public static bool FollowsSave(string action) => action is Published or Unpublished;
 }
 
 /// <param name="Action">One of <see cref="ContentActivity"/>.</param>
 /// <param name="Count">How many times it happened, for saves that have collapsed.</param>
-public record ActivityPayload(string Action, int Count = 1);
+/// <param name="Title">What it was about, such as a task's title.</param>
+/// <param name="Target">Who it was about, such as the person a task was assigned to.</param>
+public record ActivityPayload(string Action, int Count = 1, string? Title = null, string? Target = null);

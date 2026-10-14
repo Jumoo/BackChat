@@ -3,6 +3,8 @@ import type { ChatMessage } from "../signalR/types";
 interface ActivityPayload {
   action: string;
   count?: number;
+  title?: string | null;
+  target?: string | null;
 }
 
 export const isActivity = (message: ChatMessage) => message.type === "activity";
@@ -20,6 +22,12 @@ export function activityText(message: ChatMessage, term: (key: string, ...args: 
   }
 
   const action = payload?.action ?? "";
-  const text = term(`backchat_activity${action}`, message.userName, payload?.count ?? 1);
+  const text = term(
+    `backchat_activity${action}`,
+    message.userName,
+    payload?.count ?? 1,
+    payload?.title ?? "",
+    payload?.target ?? ""
+  );
   return text.startsWith("backchat_") ? `${message.userName}: ${action}` : text;
 }

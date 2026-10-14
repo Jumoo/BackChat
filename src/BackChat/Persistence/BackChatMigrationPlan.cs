@@ -17,5 +17,6 @@ public class BackChatMigrationPlan : PackageMigrationPlan
         To<GrantPermissionsToAdministrators>("grant-permissions-to-administrators");
         To<AddConfirmations>("add-confirmations");
         To<AddActivity>("add-activity");
+        To<CreateTasksTable>("create-tasks-table");
     }
 }
